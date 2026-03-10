@@ -3,8 +3,8 @@
 | 📌 指标 | 数量 |
 |---|---:|
 | 上游总数 | 50 |
-| ✅ 保留 | 21 |
-| ❌ 删除 | 29 |
+| ✅ 保留 | 20 |
+| ❌ 删除 | 30 |
 
 | ⚙️ 规则 | 值 |
 |---|---|
@@ -13,13 +13,19 @@
 | 删除关键词 | 哔哩、B站、少儿、小学、初中、高中、儿童、戏曲、本地包更新、本地更新、广告、推送、播放接口、免费、球、看球、体育 |
 | 重复源净化 | 1 |
 | DoH 拼写修复 | 1 |
+| spider 校验 | 已自动修复 |
+| jar 校验 | 检查 4 / 剔除 1 |
+
+| 🩹 自动修复 | 说明 |
+|---|---|
+| spider-fallback | http://47.120.41.246:8025/vip/jar/ouge.php -> https://raw.githubusercontent.com/qist/tvbox/master/jar/spider.jar；status=200, ct=text/html, sample="<!doctype html> <!-- This web page is copied by \"https://bazhan.wang\" --> <html" |
 
 | 🚦 HTTP 测试/延迟 | 值 |
 |---|---|
 | 测试数量 | 4 |
 | 删除失效 | 1 |
-| ⚡ 最快 Top5 | VIP豆瓣排行②(700ms)、🔥磁力┃新六(715ms)、🔥如意┃采集(2276ms) |
-| 🐢 最慢 Top5 | 🔥如意┃采集(2276ms)、🔥磁力┃新六(715ms)、VIP豆瓣排行②(700ms) |
+| ⚡ 最快 Top5 | 🔥磁力┃新六(629ms)、VIP豆瓣排行②(922ms)、🔥如意┃采集(1204ms) |
+| 🐢 最慢 Top5 | 🔥如意┃采集(1204ms)、VIP豆瓣排行②(922ms)、🔥磁力┃新六(629ms) |
 
 <details>
 <summary>✅ 保留清单（全量）</summary>
@@ -45,8 +51,7 @@
 | 17 | 🔥磁力┃迅雷 |
 | 18 | 🔥如意┃采集 |
 | 19 | 🔥磁力┃新六 |
-| 20 | 🔥聚搜┃影视 |
-| 21 | 💝影港┃4K |
+| 20 | 💝影港┃4K |
 
 </details>
 
@@ -83,6 +88,7 @@
 | 🅰影视┃哔哩 | name contains: 哔哩 |
 | 🛴推送┃播放接口免费，请测试完删除处理 | name contains: 推送 |
 | 🔥瓜子┃影视 | duplicate merged: keep more complete entry |
+| 🔥聚搜┃影视 | jar invalid: status=403, ct=text/html, sample="<html> <head><title>403 Forbidden</title></head> <body> <center><h1>403 Forbi" |
 | 🧡金牌┃PY影视 | http dead |
 
 </details>
