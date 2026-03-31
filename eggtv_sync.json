@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "repo": {
+    "github_repo": "1072103612/eggtv",
+    "branch": "main"
+  },
+  "network": {
+    "proxy_url": "http://127.0.0.1:7890",
+    "proxy_mode": "prefer"
+  },
+  "rule_sets": {
+    "shared_release_rules": {
+      "description": "主配置和副配置共用的清洗规则",
+      "arrays": {
+        "sites": {
+          "item_key": "key",
+          "strategy": "published_selection"
+        },
+        "lives": {
+          "item_key": "name",
+          "strategy": "upstream_all"
+        }
+      }
+    }
+  },
+  "profiles": {
+    "tvbox": {
+      "description": "主配置",
+      "rule_set": "shared_release_rules",
+      "upstream_url": "http://156.238.235.72:1111/jjzzVIP110.json",
+      "fetch_timeout": 60,
+      "upstream_seed": "tvbox_upstream.json",
+      "upstream_output": "tvbox_upstream.json",
+      "publish_output": "tvbox_config.json",
+      "spider": {
+        "download_to": "jar/spider.jar",
+        "publish_path": "jar/spider.jar",
+        "timeout": 120
+      }
+    },
+    "jsm": {
+      "description": "副配置",
+      "rule_set": "shared_release_rules",
+      "upstream_url": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
+      "upstream_fallback_urls": [
+        "https://cdn.jsdelivr.net/gh/qist/tvbox@master/jsm.json"
+      ],
+      "fetch_timeout": 120,
+      "upstream_seed": "jsm_upstream.json",
+      "upstream_output": "jsm_upstream.json",
+      "publish_output": "jsm_backup.json",
+      "spider": {
+        "download_to": "jar/spider.jar",
+        "publish_path": "jar/spider.jar",
+        "timeout": 120
+      }
+    }
+  }
+}
