@@ -17,6 +17,7 @@ import argparse
 import copy
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import urllib.parse
@@ -29,6 +30,9 @@ JsonValue = Any
 
 class SyncError(RuntimeError):
     """Raised when a profile cannot be synced safely."""
+
+
+URL_PATTERN = re.compile(r"https?://[^\s,'\"<>]+", re.IGNORECASE)
 
 
 def load_json(path: Path) -> JsonValue:
@@ -313,6 +317,198 @@ def group_items(items: Iterable[Dict[str, Any]], key_field: str) -> Dict[str, Li
     return grouped
 
 
+def stringify_compact(value: JsonValue) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def collect_item_fields(item: Dict[str, Any], fields: Iterable[str]) -> Dict[str, str]:
+    collected: Dict[str, str] = {}
+    for field in fields:
+        collected[field] = stringify_compact(item.get(field))
+    return collected
+
+
+def contains_any(haystack: str, needles: Iterable[str]) -> bool:
+    lowered = haystack.casefold()
+    for needle in needles:
+        if needle.casefold() in lowered:
+            return True
+    return False
+
+
+def item_matches_filter(item: Dict[str, Any], filter_config: Dict[str, Any]) -> bool:
+    searchable_fields = filter_config.get("search_fields", ["key", "name", "api", "ext"])
+    field_map = collect_item_fields(item, searchable_fields)
+    combined = " ".join(value for value in field_map.values() if value).strip()
+
+    retain_keywords = filter_config.get("retain_keywords", [])
+    if retain_keywords and contains_any(combined, retain_keywords):
+        return False
+
+    drop_keywords = filter_config.get("drop_keywords", [])
+    if drop_keywords and contains_any(combined, drop_keywords):
+        return True
+
+    drop_field_keywords = filter_config.get("drop_field_keywords", {})
+    for field_name, keywords in drop_field_keywords.items():
+        if contains_any(stringify_compact(item.get(field_name)), keywords):
+            return True
+
+    return False
+
+
+def filter_items_by_rules(
+    items: List[Dict[str, Any]],
+    filter_config: Optional[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not filter_config:
+        return copy.deepcopy(items)
+
+    filtered: List[Dict[str, Any]] = []
+    for item in items:
+        if item_matches_filter(item, filter_config):
+            continue
+        filtered.append(copy.deepcopy(item))
+    return filtered
+
+
+def extract_urls_from_text(value: str) -> List[str]:
+    return [match.rstrip(").") for match in URL_PATTERN.findall(value)]
+
+
+def collect_probe_urls(value: JsonValue) -> List[str]:
+    urls: List[str] = []
+    if isinstance(value, str):
+        urls.extend(extract_urls_from_text(value))
+    elif isinstance(value, list):
+        for item in value:
+            urls.extend(collect_probe_urls(item))
+    elif isinstance(value, dict):
+        for item in value.values():
+            urls.extend(collect_probe_urls(item))
+    return urls
+
+
+def unique_preserve_order(items: Iterable[str]) -> List[str]:
+    seen = set()
+    result: List[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        result.append(item)
+        seen.add(item)
+    return result
+
+
+def extract_site_probe_urls(site: Dict[str, Any], probe_config: Dict[str, Any]) -> List[str]:
+    probe_fields = probe_config.get("probe_fields", ["api", "ext"])
+    urls: List[str] = []
+    for field in probe_fields:
+        urls.extend(collect_probe_urls(site.get(field)))
+    return unique_preserve_order(urls)[: int(probe_config.get("max_urls_per_site", 1))]
+
+
+def probe_url(
+    url: str,
+    timeout: int,
+    connect_timeout: int,
+    network: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    errors: List[str] = []
+    for mode, proxy_url in build_fetch_attempts(network):
+        command = [
+            "curl",
+            "-fsSL",
+            "-A",
+            "Mozilla/5.0",
+            "--connect-timeout",
+            str(connect_timeout),
+            "--max-time",
+            str(timeout),
+            "-o",
+            "/dev/null",
+            "-w",
+            "%{http_code}\t%{time_starttransfer}\t%{time_total}\t%{size_download}\t%{speed_download}",
+        ]
+        if proxy_url:
+            command.extend(["--proxy", proxy_url])
+        command.append(url)
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            http_code, ttfb, total, size_download, speed_download = result.stdout.strip().split("\t")
+            return {
+                "url": url,
+                "http_code": int(http_code),
+                "time_starttransfer_ms": float(ttfb) * 1000.0,
+                "time_total_ms": float(total) * 1000.0,
+                "size_download": float(size_download),
+                "speed_download": float(speed_download),
+                "mode": mode,
+            }
+        stderr = result.stderr.strip() or "curl failed"
+        label = f"{mode}({proxy_url})" if proxy_url else mode
+        errors.append(f"{label}: {stderr}")
+
+    return None
+
+
+def is_probe_slow(probe: Dict[str, Any], probe_config: Dict[str, Any]) -> bool:
+    max_ttfb_ms = float(probe_config.get("max_time_starttransfer_ms", 4000))
+    min_speed = float(probe_config.get("min_speed_bytes_per_sec", 12000))
+    min_size = float(probe_config.get("min_size_for_speed_check", 4096))
+    if probe["time_starttransfer_ms"] > max_ttfb_ms:
+        return True
+    if probe["size_download"] >= min_size and probe["speed_download"] < min_speed:
+        return True
+    return False
+
+
+def apply_site_probes(
+    sites: List[Dict[str, Any]],
+    probe_config: Optional[Dict[str, Any]],
+    network: Optional[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not probe_config or not probe_config.get("enabled"):
+        return copy.deepcopy(sites)
+
+    timeout = int(probe_config.get("timeout", 6))
+    connect_timeout = int(probe_config.get("connect_timeout", 3))
+    kept_sites: List[Dict[str, Any]] = []
+
+    for site in sites:
+        probe_urls = extract_site_probe_urls(site, probe_config)
+        if not probe_urls:
+            kept_sites.append(copy.deepcopy(site))
+            continue
+
+        best_probe: Optional[Dict[str, Any]] = None
+        for url in probe_urls:
+            probe = probe_url(url, timeout=timeout, connect_timeout=connect_timeout, network=network)
+            if probe is None:
+                continue
+            if best_probe is None or probe["time_starttransfer_ms"] < best_probe["time_starttransfer_ms"]:
+                best_probe = probe
+
+        if best_probe is None:
+            print(f"[probe] removed {site.get('name') or site.get('key')}: no reachable endpoint")
+            continue
+
+        if is_probe_slow(best_probe, probe_config):
+            print(
+                f"[probe] removed {site.get('name') or site.get('key')}: "
+                f"slow endpoint {int(best_probe['time_starttransfer_ms'])}ms"
+            )
+            continue
+
+        kept_sites.append(copy.deepcopy(site))
+
+    return kept_sites
+
+
 def make_occurrence_ref(item_key: str, occurrence_index: int) -> str:
     return f"{item_key}#{occurrence_index}"
 
@@ -432,14 +628,17 @@ def prepare_publish_payload(
 ) -> Dict[str, Any]:
     publish = copy.deepcopy(fetched_upstream)
     arrays = profile_config.get("arrays", {})
+    explicit_filters = profile_config.get("explicit_filters", {})
 
     if previous_upstream is None or previous_publish is None:
         for array_name, array_config in arrays.items():
             strategy = array_config.get("strategy", "upstream_all")
-            if strategy != "upstream_all":
-                continue
             items = publish.get(array_name, [])
             if isinstance(items, list):
+                items = filter_items_by_rules(items, explicit_filters.get(array_name))
+                if strategy != "upstream_all":
+                    publish[array_name] = items
+                    continue
                 publish[array_name] = apply_array_rules(
                     items,
                     array_config["item_key"],
@@ -458,6 +657,7 @@ def prepare_publish_payload(
         upstream_items = publish.get(array_name, [])
         if not isinstance(upstream_items, list):
             continue
+        upstream_items = filter_items_by_rules(upstream_items, explicit_filters.get(array_name))
         strategy = array_config.get("strategy", "upstream_all")
         rules = None
         if strategy == "published_selection":
@@ -472,6 +672,10 @@ def prepare_publish_payload(
             array_config["item_key"],
             strategy,
             rules,
+        )
+        publish[array_name] = filter_items_by_rules(
+            publish[array_name],
+            explicit_filters.get(array_name),
         )
 
     publish = deep_patch(publish, profile_config.get("overrides", {}))
@@ -598,6 +802,12 @@ def sync_profile(
         previous_publish,
         profile_config,
     )
+    if isinstance(publish_payload.get("sites"), list):
+        publish_payload["sites"] = apply_site_probes(
+            publish_payload["sites"],
+            profile_config.get("site_probes"),
+            network,
+        )
 
     changed_files: List[Path] = []
     if save_json(upstream_output, fetched_upstream):
@@ -744,6 +954,10 @@ def resolve_profile_config(config: Dict[str, Any], profile_name: str) -> Dict[st
         overrides = copy.deepcopy(rule_set.get("overrides", {}))
         overrides = deep_patch(overrides, profile.get("overrides", {}))
         merged["overrides"] = overrides
+    if "explicit_filters" in rule_set or "explicit_filters" in profile:
+        explicit_filters = copy.deepcopy(rule_set.get("explicit_filters", {}))
+        explicit_filters = deep_patch(explicit_filters, profile.get("explicit_filters", {}))
+        merged["explicit_filters"] = explicit_filters
     return merged
 
 
@@ -800,14 +1014,31 @@ def cmd_show_rules(args: argparse.Namespace) -> int:
         print(f"- 上游留底: {profile.get('upstream_output')}")
         print(f"- 对外发布: {profile.get('publish_output')}")
         print(f"- 规则集: {profile.get('rule_set') or '内联规则'}")
+        explicit_filters = profile.get("explicit_filters", {}).get("sites", {})
+        if explicit_filters:
+            retain_keywords = explicit_filters.get("retain_keywords", [])
+            drop_keywords = explicit_filters.get("drop_keywords", [])
+            if retain_keywords:
+                print(f"- 站点显式保留关键词: {', '.join(retain_keywords)}")
+            if drop_keywords:
+                print(f"- 站点显式删除关键词: {', '.join(drop_keywords)}")
+        site_probes = profile.get("site_probes", {})
+        if site_probes.get("enabled"):
+            print(
+                "- 站点测速剔除: "
+                f"开启, 超时 {site_probes.get('timeout', 6)}s, "
+                f"首包阈值 {site_probes.get('max_time_starttransfer_ms', 4000)}ms"
+            )
         print("- 当前清洗规则:")
         print("  1. 抓取上游原始 JSON，保存为留底文件")
-        print("  2. `sites` 按当前发布文件的保留项、顺序和改名规则生成")
-        print("  3. `lives` 直接跟随上游最新内容")
-        print("  4. 其他顶层字段默认沿用你当前发布文件里已经形成的人工改动")
-        print("  5. `spider.jar` 下载到仓库，再改写成 GitHub Raw 地址和最新 MD5")
-        print("  6. 如果上游返回的不是有效 jar，而是网页或报错页，就保留仓库里现有的 jar")
-        print("  7. 因为主/副配置共用同一个 `jar/spider.jar`，两个文件的 spider MD5 会自动保持一致")
+        print("  2. `sites` 先按显式关键词规则过滤，再按当前发布文件的保留项、顺序和改名规则生成")
+        print("  3. 最终发布结果会再执行一次显式规则过滤，避免旧条目被继承回来")
+        print("  4. 对最终保留的 `sites` 做可达性和基础速度探测，剔除失效或明显过慢的源")
+        print("  5. `lives` 直接跟随上游最新内容")
+        print("  6. 其他顶层字段默认沿用你当前发布文件里已经形成的人工改动")
+        print("  7. `spider.jar` 下载到仓库，再改写成 GitHub Raw 地址和最新 MD5")
+        print("  8. 如果上游返回的不是有效 jar，而是网页或报错页，就保留仓库里现有的 jar")
+        print("  9. 因为主/副配置共用同一个 `jar/spider.jar`，两个文件的 spider MD5 会自动保持一致")
         print()
     return 0
 

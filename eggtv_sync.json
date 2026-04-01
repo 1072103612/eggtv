@@ -20,6 +20,90 @@
           "item_key": "name",
           "strategy": "upstream_all"
         }
+      },
+      "explicit_filters": {
+        "sites": {
+          "search_fields": [
+            "key",
+            "name",
+            "api"
+          ],
+          "drop_keywords": [
+            "哔哩",
+            "b站",
+            "bilibili",
+            "少儿",
+            "小学",
+            "初中",
+            "高中",
+            "儿童",
+            "教育",
+            "课堂",
+            "听书",
+            "音乐",
+            "dj",
+            "相声",
+            "小品",
+            "戏曲",
+            "广播",
+            "播客",
+            "短剧",
+            "看球",
+            "体育",
+            "直播",
+            "急救",
+            "养生",
+            "网易公版",
+            "酷6网",
+            "手机",
+            "推送",
+            "应用商店",
+            "應用商店",
+            "配置接口完全免费",
+            "请勿相信视频中任何广告",
+            "广告",
+            "网盘",
+            "云盘",
+            "阿里",
+            "夸克",
+            "百度",
+            "uc",
+            "搜索",
+            "搜狗",
+            "聚合",
+            "官源",
+            "本地包更新",
+            "本地更新",
+            "播放接口",
+            "免费",
+            "4k",
+            "扫码",
+            "二维码",
+            "wechat",
+            "微信",
+            "qq扫码"
+          ],
+          "drop_field_keywords": {
+            "api": [
+              "csp_Pan",
+              "Sou",
+              "Search"
+            ]
+          }
+        }
+      },
+      "site_probes": {
+        "enabled": true,
+        "probe_fields": [
+          "api",
+          "ext"
+        ],
+        "max_urls_per_site": 1,
+        "connect_timeout": 3,
+        "timeout": 6,
+        "max_time_starttransfer_ms": 4000,
+        "min_size_for_speed_check": 262144,
+        "min_speed_bytes_per_sec": 12000
       }
     }
   },
