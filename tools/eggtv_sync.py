@@ -569,6 +569,7 @@ def apply_array_rules(
     key_field: str,
     strategy: str,
     rules: Optional[Dict[str, Any]],
+    append_new_items: bool = False,
 ) -> List[Dict[str, Any]]:
     if strategy == "upstream_all":
         return copy.deepcopy(upstream_items)
@@ -579,6 +580,7 @@ def apply_array_rules(
     upstream_groups = group_items(upstream_items, key_field)
     selected_items: List[Dict[str, Any]] = []
     selected_refs: List[str] = rules.get("selected_refs", [])
+    selected_ref_set = set(selected_refs)
     patches: Dict[str, Any] = rules.get("patches", {})
     extra_items: Dict[str, Any] = rules.get("extra_items", {})
 
@@ -595,6 +597,19 @@ def apply_array_rules(
 
         if reference in extra_items:
             selected_items.append(copy.deepcopy(extra_items[reference]))
+
+    if append_new_items:
+        seen_counts: Dict[str, int] = {}
+        for item in upstream_items:
+            item_key = item.get(key_field)
+            if item_key is None:
+                continue
+            occurrence_index = seen_counts.get(item_key, 0)
+            seen_counts[item_key] = occurrence_index + 1
+            reference = make_occurrence_ref(item_key, occurrence_index)
+            if reference in selected_ref_set:
+                continue
+            selected_items.append(copy.deepcopy(item))
 
     return selected_items
 
@@ -633,17 +648,25 @@ def prepare_publish_payload(
     if previous_upstream is None or previous_publish is None:
         for array_name, array_config in arrays.items():
             strategy = array_config.get("strategy", "upstream_all")
+            append_new_items = bool(array_config.get("append_new_items", False))
             items = publish.get(array_name, [])
             if isinstance(items, list):
                 items = filter_items_by_rules(items, explicit_filters.get(array_name))
                 if strategy != "upstream_all":
-                    publish[array_name] = items
+                    publish[array_name] = apply_array_rules(
+                        items,
+                        array_config["item_key"],
+                        strategy,
+                        None,
+                        append_new_items=append_new_items,
+                    )
                     continue
                 publish[array_name] = apply_array_rules(
                     items,
                     array_config["item_key"],
                     strategy,
                     None,
+                    append_new_items=append_new_items,
                 )
         publish = deep_patch(publish, profile_config.get("overrides", {}))
         return publish
@@ -659,6 +682,7 @@ def prepare_publish_payload(
             continue
         upstream_items = filter_items_by_rules(upstream_items, explicit_filters.get(array_name))
         strategy = array_config.get("strategy", "upstream_all")
+        append_new_items = bool(array_config.get("append_new_items", False))
         rules = None
         if strategy == "published_selection":
             rules = derive_array_rules(
@@ -672,6 +696,7 @@ def prepare_publish_payload(
             array_config["item_key"],
             strategy,
             rules,
+            append_new_items=append_new_items,
         )
         publish[array_name] = filter_items_by_rules(
             publish[array_name],
@@ -1032,6 +1057,7 @@ def cmd_show_rules(args: argparse.Namespace) -> int:
         print("- 当前清洗规则:")
         print("  1. 抓取上游原始 JSON，保存为留底文件")
         print("  2. `sites` 先按显式关键词规则过滤，再按当前发布文件的保留项、顺序和改名规则生成")
+        print("     同时自动补进上游新出现、且没命中删除规则的新源")
         print("  3. 最终发布结果会再执行一次显式规则过滤，避免旧条目被继承回来")
         print("  4. 对最终保留的 `sites` 做可达性和基础速度探测，剔除失效或明显过慢的源")
         print("  5. `lives` 直接跟随上游最新内容")
