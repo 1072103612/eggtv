@@ -1,45 +1,38 @@
 #!/usr/bin/env python3
-"""Sync curated TVBox-style source files from upstream into this repo.
+"""Sync TVBox sources from upstream to GitHub.
 
-The workflow this script supports is:
-1. Fetch the latest upstream JSON from a URL or a local seed file.
-2. Save the raw upstream snapshot into the repo.
-3. Derive the current curation rules from the previous upstream snapshot
-   plus the current published file in the repo.
-4. Apply those rules to the newly fetched upstream snapshot.
-5. Rewrite the spider jar to a GitHub Raw URL with an md5 suffix.
-6. Optionally commit and push the result.
+Simple workflow:
+1. Fetch upstream JSON
+2. Save raw upstream snapshot
+3. Update spider.jar URLs to GitHub Raw
+4. Generate mirrors.json for CDN redundancy
+5. Save as publish file (same as upstream, just with updated spider URLs)
 """
 
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import copy
 import hashlib
 import json
-import re
 import subprocess
 import sys
 import urllib.parse
-from concurrent.futures import as_completed
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 JsonValue = Any
 
 
 class SyncError(RuntimeError):
-    """Raised when a profile cannot be synced safely."""
-
-
-URL_PATTERN = re.compile(r"https?://[^\s,'\"<>]+", re.IGNORECASE)
+    """Raised when a sync fails."""
 
 
 def load_json(path: Path) -> JsonValue:
-    with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def save_json(path: Path, data: JsonValue, dry_run: bool = False) -> bool:
@@ -54,34 +47,21 @@ def save_json(path: Path, data: JsonValue, dry_run: bool = False) -> bool:
 
 
 def is_http_url(value: str) -> bool:
-    scheme = urllib.parse.urlparse(value).scheme
-    return scheme in {"http", "https"}
-
-
-def is_file_url(value: str) -> bool:
-    return urllib.parse.urlparse(value).scheme == "file"
+    return urllib.parse.urlparse(value).scheme in {"http", "https"}
 
 
 def normalize_source_url(source: str) -> str:
     parsed = urllib.parse.urlparse(source)
     if parsed.scheme not in {"http", "https"}:
         return source
-
     if parsed.netloc != "github.com":
         return source
-
-    parts = [part for part in parsed.path.split("/") if part]
+    parts = [p for p in parsed.path.split("/") if p]
     if len(parts) >= 5 and parts[2] == "blob":
         owner, repo, _, branch = parts[:4]
         remainder = "/".join(parts[4:])
         return f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{remainder}"
-
     return source
-
-
-def resolve_file_url(source: str) -> Path:
-    parsed = urllib.parse.urlparse(source)
-    return Path(urllib.parse.unquote(parsed.path)).expanduser()
 
 
 def build_fetch_attempts(network: Optional[Dict[str, Any]]) -> List[Tuple[str, Optional[str]]]:
@@ -98,32 +78,22 @@ def build_fetch_attempts(network: Optional[Dict[str, Any]]) -> List[Tuple[str, O
 
 
 def read_http_bytes(source: str, timeout: int = 30, network: Optional[Dict[str, Any]] = None) -> bytes:
-    errors: List[str] = []
+    errors = []
     for mode, proxy_url in build_fetch_attempts(network):
-        command = [
-            "curl",
-            "-fsSL",
-            "-A",
-            "eggtv-sync/1.0 (+https://github.com/1072103612/eggtv)",
-            "--retry",
-            "2",
-            "--retry-delay",
-            "2",
-            "--connect-timeout",
-            str(min(timeout, 20)),
-            "--max-time",
-            str(timeout),
+        cmd = [
+            "curl", "-fsSL",
+            "-A", "eggtv-sync/1.0 (+https://github.com/1072103612/eggtv)",
+            "--retry", "2", "--retry-delay", "2",
+            "--connect-timeout", str(min(timeout, 20)),
+            "--max-time", str(timeout),
         ]
         if proxy_url:
-            command.extend(["--proxy", proxy_url])
-        command.append(source)
-        result = subprocess.run(command, capture_output=True, check=False)
+            cmd.extend(["--proxy", proxy_url])
+        cmd.append(source)
+        result = subprocess.run(cmd, capture_output=True, check=False)
         if result.returncode == 0:
             return result.stdout
-        stderr = result.stderr.decode("utf-8", errors="replace").strip() or "curl failed"
-        label = f"{mode}({proxy_url})" if proxy_url else mode
-        errors.append(f"{label}: {stderr}")
-
+        errors.append(f"{mode}: {result.stderr.decode('utf-8', errors='replace').strip() or 'curl failed'}")
     raise SyncError(f"failed to fetch {source}: {' | '.join(errors)}")
 
 
@@ -131,12 +101,6 @@ def read_bytes_from_source(source: str, timeout: int = 30, network: Optional[Dic
     source = normalize_source_url(source)
     if is_http_url(source):
         return read_http_bytes(source, timeout=timeout, network=network)
-    if is_file_url(source):
-        path = resolve_file_url(source)
-        if not path.exists():
-            raise SyncError(f"source does not exist: {path}")
-        return path.read_bytes()
-
     path = Path(source).expanduser()
     if not path.is_absolute():
         path = Path.cwd() / path
@@ -146,17 +110,16 @@ def read_bytes_from_source(source: str, timeout: int = 30, network: Optional[Dic
 
 
 def load_json_from_source(source: str, timeout: int = 30, network: Optional[Dict[str, Any]] = None) -> JsonValue:
-    payload = read_bytes_from_source(source, timeout=timeout, network=network)
     try:
-        return json.loads(payload.decode("utf-8"))
+        return json.loads(read_bytes_from_source(source, timeout=timeout, network=network).decode("utf-8"))
     except json.JSONDecodeError as exc:
         raise SyncError(f"invalid JSON from {source}: {exc}") from exc
 
 
 def md5_file(path: Path) -> str:
     digest = hashlib.md5()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
 
@@ -177,23 +140,18 @@ def ensure_relative_to_repo(repo_root: Path, relative_path: str) -> Path:
 def infer_default_branch(repo_root: Path) -> str:
     result = subprocess.run(
         ["git", "-C", str(repo_root), "branch", "--show-current"],
-        capture_output=True,
-        text=True,
-        check=True,
+        capture_output=True, text=True, check=True,
     )
-    branch = result.stdout.strip()
-    return branch or "main"
+    return result.stdout.strip() or "main"
 
 
 def infer_github_repo(repo_root: Path) -> Optional[str]:
     result = subprocess.run(
         ["git", "-C", str(repo_root), "remote", "get-url", "origin"],
-        capture_output=True,
-        text=True,
+        capture_output=True, text=True,
     )
     if result.returncode != 0:
         return None
-
     remote = result.stdout.strip()
     if remote.startswith("git@github.com:"):
         remote = remote[len("git@github.com:") :]
@@ -201,85 +159,19 @@ def infer_github_repo(repo_root: Path) -> Optional[str]:
         remote = remote[len("https://github.com/") :]
     else:
         return None
-
     if remote.endswith(".git"):
         remote = remote[:-4]
     return remote or None
 
 
 def compute_raw_base(repo_root: Path, repo_config: Dict[str, Any]) -> str:
-    explicit = repo_config.get("raw_base")
-    if explicit:
-        return explicit.rstrip("/")
-
+    if repo_config.get("raw_base"):
+        return repo_config["raw_base"].rstrip("/")
     github_repo = repo_config.get("github_repo") or infer_github_repo(repo_root)
     if not github_repo:
         raise SyncError("cannot infer GitHub repo; set repo.github_repo or repo.raw_base")
-
     branch = repo_config.get("branch") or infer_default_branch(repo_root)
     return f"https://raw.githubusercontent.com/{github_repo}/{branch}"
-
-
-def normalize_json_path(path: str) -> List[str]:
-    return [segment for segment in path.split(".") if segment]
-
-
-def get_in(data: JsonValue, path: str) -> JsonValue:
-    current = data
-    for segment in normalize_json_path(path):
-        if not isinstance(current, dict) or segment not in current:
-            raise KeyError(path)
-        current = current[segment]
-    return current
-
-
-def set_in(data: JsonValue, path: str, value: JsonValue) -> None:
-    segments = normalize_json_path(path)
-    if not segments:
-        raise SyncError("cannot set an empty path")
-
-    current = data
-    for segment in segments[:-1]:
-        next_value = current.get(segment)
-        if not isinstance(next_value, dict):
-            next_value = {}
-            current[segment] = next_value
-        current = next_value
-    current[segments[-1]] = value
-
-
-def deep_patch(base: JsonValue, patch: JsonValue) -> JsonValue:
-    if isinstance(base, dict) and isinstance(patch, dict):
-        merged = copy.deepcopy(base)
-        for key, value in patch.items():
-            if key in merged:
-                merged[key] = deep_patch(merged[key], value)
-            else:
-                merged[key] = copy.deepcopy(value)
-        return merged
-
-    return copy.deepcopy(patch)
-
-
-def deep_diff(base: JsonValue, target: JsonValue) -> Optional[JsonValue]:
-    if base == target:
-        return None
-
-    if isinstance(base, dict) and isinstance(target, dict):
-        diff: Dict[str, JsonValue] = {}
-        keys = set(base) | set(target)
-        for key in sorted(keys):
-            if key not in target:
-                continue
-            if key not in base:
-                diff[key] = copy.deepcopy(target[key])
-                continue
-            child = deep_diff(base[key], target[key])
-            if child is not None:
-                diff[key] = child
-        return diff or None
-
-    return copy.deepcopy(target)
 
 
 def strip_spider_suffix(spider_value: str) -> str:
@@ -290,458 +182,37 @@ def resolve_relative_reference(base_source: str, reference: str) -> str:
     parsed = urllib.parse.urlparse(reference)
     if parsed.scheme in {"http", "https", "file"}:
         return reference
-
-    if base_source and (is_http_url(base_source) or is_file_url(base_source)):
+    if base_source and is_http_url(base_source):
         return urllib.parse.urljoin(base_source, reference)
-
-    base_path = Path(base_source).expanduser()
-    if not base_path.is_absolute():
-        base_path = Path.cwd() / base_path
-    return str((base_path.parent / reference).resolve())
+    return reference
 
 
-def index_items(items: Iterable[Dict[str, Any]], key_field: str) -> Dict[str, Dict[str, Any]]:
-    indexed: Dict[str, Dict[str, Any]] = {}
-    for item in items:
-        item_key = item.get(key_field)
-        if item_key is None or item_key in indexed:
-            continue
-        indexed[item_key] = item
-    return indexed
+def run_git(repo_root: Path, args: List[str]) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        capture_output=True, text=True, check=False,
+    )
 
 
-def group_items(items: Iterable[Dict[str, Any]], key_field: str) -> Dict[str, List[Dict[str, Any]]]:
-    grouped: Dict[str, List[Dict[str, Any]]] = {}
-    for item in items:
-        item_key = item.get(key_field)
-        if item_key is None:
-            continue
-        grouped.setdefault(item_key, []).append(item)
-    return grouped
+# --- Spider handling ---
 
-
-def stringify_compact(value: JsonValue) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value
-    return json.dumps(value, ensure_ascii=False, sort_keys=True)
-
-
-def collect_item_fields(item: Dict[str, Any], fields: Iterable[str]) -> Dict[str, str]:
-    collected: Dict[str, str] = {}
-    for field in fields:
-        collected[field] = stringify_compact(item.get(field))
-    return collected
-
-
-def contains_any(haystack: str, needles: Iterable[str]) -> bool:
-    lowered = haystack.casefold()
-    for needle in needles:
-        if needle.casefold() in lowered:
-            return True
-    return False
-
-
-def item_matches_filter(item: Dict[str, Any], filter_config: Dict[str, Any]) -> bool:
-    searchable_fields = filter_config.get("search_fields", ["key", "name", "api", "ext"])
-    field_map = collect_item_fields(item, searchable_fields)
-    combined = " ".join(value for value in field_map.values() if value).strip()
-
-    retain_keywords = filter_config.get("retain_keywords", [])
-    if retain_keywords and contains_any(combined, retain_keywords):
-        return False
-
-    drop_keywords = filter_config.get("drop_keywords", [])
-    if drop_keywords and contains_any(combined, drop_keywords):
-        return True
-
-    drop_field_keywords = filter_config.get("drop_field_keywords", {})
-    for field_name, keywords in drop_field_keywords.items():
-        if contains_any(stringify_compact(item.get(field_name)), keywords):
-            return True
-
-    return False
-
-
-def filter_items_by_rules(
-    items: List[Dict[str, Any]],
-    filter_config: Optional[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    if not filter_config:
-        return copy.deepcopy(items)
-
-    filtered: List[Dict[str, Any]] = []
-    for item in items:
-        if item_matches_filter(item, filter_config):
-            continue
-        filtered.append(copy.deepcopy(item))
-    return filtered
-
-
-def extract_urls_from_text(value: str) -> List[str]:
-    urls = []
-    for match in URL_PATTERN.findall(value):
-        # Strip trailing ) or . that was captured as part of URL from surrounding context
-        # Strip one char at a time to avoid over-stripping
-        while match and match[-1] in ").":
-            match = match[:-1]
-        if match:
-            urls.append(match)
-    return urls
-
-
-def collect_probe_urls(value: JsonValue) -> List[str]:
-    urls: List[str] = []
-    if isinstance(value, str):
-        urls.extend(extract_urls_from_text(value))
-    elif isinstance(value, list):
-        for item in value:
-            urls.extend(collect_probe_urls(item))
-    elif isinstance(value, dict):
-        for item in value.values():
-            urls.extend(collect_probe_urls(item))
-    return urls
-
-
-def unique_preserve_order(items: Iterable[str]) -> List[str]:
-    seen = set()
-    result: List[str] = []
-    for item in items:
-        if item in seen:
-            continue
-        result.append(item)
-        seen.add(item)
-    return result
-
-
-def extract_site_probe_urls(site: Dict[str, Any], probe_config: Dict[str, Any]) -> List[str]:
-    probe_fields = probe_config.get("probe_fields", ["api", "ext"])
-    urls: List[str] = []
-    for field in probe_fields:
-        urls.extend(collect_probe_urls(site.get(field)))
-    return unique_preserve_order(urls)[: int(probe_config.get("max_urls_per_site", 1))]
-
-
-def probe_url(
-    url: str,
-    timeout: int,
-    connect_timeout: int,
+def download_spider_with_fallback(
+    sources: List[str],
+    spider_timeout: int,
     network: Optional[Dict[str, Any]],
-) -> Optional[Dict[str, Any]]:
-    errors: List[str] = []
-    for mode, proxy_url in build_fetch_attempts(network):
-        command = [
-            "curl",
-            "-fsSL",
-            "-A",
-            "Mozilla/5.0",
-            "--connect-timeout",
-            str(connect_timeout),
-            "--max-time",
-            str(timeout),
-            "-o",
-            "/dev/null",
-            "-w",
-            "%{http_code}\t%{time_starttransfer}\t%{time_total}\t%{size_download}\t%{speed_download}",
-        ]
-        if proxy_url:
-            command.extend(["--proxy", proxy_url])
-        command.append(url)
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
-        if result.returncode == 0:
-            http_code, ttfb, total, size_download, speed_download = result.stdout.strip().split("\t")
-            return {
-                "url": url,
-                "http_code": int(http_code),
-                "time_starttransfer_ms": float(ttfb) * 1000.0,
-                "time_total_ms": float(total) * 1000.0,
-                "size_download": float(size_download),
-                "speed_download": float(speed_download),
-                "mode": mode,
-            }
-        stderr = result.stderr.strip() or "curl failed"
-        label = f"{mode}({proxy_url})" if proxy_url else mode
-        errors.append(f"{label}: {stderr}")
-
-    return None
-
-
-def is_probe_slow(probe: Dict[str, Any], probe_config: Dict[str, Any]) -> bool:
-    max_ttfb_ms = float(probe_config.get("max_time_starttransfer_ms", 4000))
-    min_speed = float(probe_config.get("min_speed_bytes_per_sec", 12000))
-    min_size = float(probe_config.get("min_size_for_speed_check", 4096))
-    if probe["time_starttransfer_ms"] > max_ttfb_ms:
-        return True
-    if probe["size_download"] >= min_size and probe["speed_download"] < min_speed:
-        return True
-    return False
-
-
-def _probe_single_site(
-    site: Dict[str, Any],
-    probe_config: Dict[str, Any],
-    network: Optional[Dict[str, Any]],
-) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], Optional[str]]:
-    """Probe a single site, return (site_copy, best_probe, removal_reason)."""
-    timeout = int(probe_config.get("timeout", 6))
-    connect_timeout = int(probe_config.get("connect_timeout", 3))
-
-    probe_urls = extract_site_probe_urls(site, probe_config)
-    if not probe_urls:
-        return copy.deepcopy(site), None, None
-
-    best_probe: Optional[Dict[str, Any]] = None
-    for url in probe_urls:
-        probe = probe_url(url, timeout=timeout, connect_timeout=connect_timeout, network=network)
-        if probe is None:
-            continue
-        if best_probe is None or probe["time_starttransfer_ms"] < best_probe["time_starttransfer_ms"]:
-            best_probe = probe
-
-    if best_probe is None:
-        return copy.deepcopy(site), None, "no reachable endpoint"
-
-    if is_probe_slow(best_probe, probe_config):
-        return copy.deepcopy(site), best_probe, f"slow endpoint {int(best_probe['time_starttransfer_ms'])}ms"
-
-    return copy.deepcopy(site), best_probe, None
-
-
-def apply_site_probes(
-    sites: List[Dict[str, Any]],
-    probe_config: Optional[Dict[str, Any]],
-    network: Optional[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    if not probe_config or not probe_config.get("enabled"):
-        return copy.deepcopy(sites)
-
-    max_workers = int(probe_config.get("max_workers", 8))
-    sites_with_probes: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]], Optional[str]]] = []
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(_probe_single_site, site, probe_config, network): site
-            for site in sites
-        }
-        for future in as_completed(futures):
-            try:
-                result = future.result()
-                sites_with_probes.append(result)
-            except Exception as exc:
-                site = futures[future]
-                print(f"[probe] error probing {site.get('name') or site.get('key')}: {exc}")
-                sites_with_probes.append((copy.deepcopy(site), None, None))
-
-    kept_sites: List[Dict[str, Any]] = []
-    removed_count = 0
-    for site, best_probe, removal_reason in sites_with_probes:
-        if removal_reason is not None:
-            print(f"[probe] removed {site.get('name') or site.get('key')}: {removal_reason}")
-            removed_count += 1
-        else:
-            kept_sites.append(site)
-
-    print(f"[probe] done: {len(sites)} sites, {removed_count} removed, {len(kept_sites)} kept")
-    return kept_sites
-
-
-def make_occurrence_ref(item_key: str, occurrence_index: int) -> str:
-    return f"{item_key}#{occurrence_index}"
-
-
-def split_occurrence_ref(reference: str) -> Tuple[str, int]:
-    item_key, _, index_text = reference.rpartition("#")
-    if not item_key or not index_text.isdigit():
-        raise SyncError(f"invalid occurrence reference: {reference}")
-    return item_key, int(index_text)
-
-
-def derive_array_rules(
-    previous_upstream: JsonValue,
-    previous_publish: JsonValue,
-    array_name: str,
-    key_field: str,
-) -> Dict[str, Any]:
-    previous_upstream_items = previous_upstream.get(array_name, []) if isinstance(previous_upstream, dict) else []
-    previous_publish_items = previous_publish.get(array_name, []) if isinstance(previous_publish, dict) else []
-    if not isinstance(previous_upstream_items, list) or not isinstance(previous_publish_items, list):
-        return {"selected_refs": [], "patches": {}, "extra_items": {}}
-
-    upstream_groups = group_items(previous_upstream_items, key_field)
-    seen_counts: Dict[str, int] = {}
-    selected_refs: List[str] = []
-    patches: Dict[str, Any] = {}
-    extra_items: Dict[str, Dict[str, Any]] = {}
-
-    for item in previous_publish_items:
-        if not isinstance(item, dict):
-            continue
-        item_key = item.get(key_field)
-        if item_key is None:
-            continue
-        occurrence_index = seen_counts.get(item_key, 0)
-        seen_counts[item_key] = occurrence_index + 1
-        reference = make_occurrence_ref(item_key, occurrence_index)
-        selected_refs.append(reference)
-
-        upstream_items_for_key = upstream_groups.get(item_key, [])
-        if occurrence_index >= len(upstream_items_for_key):
-            extra_items[reference] = copy.deepcopy(item)
-            continue
-        upstream_item = upstream_items_for_key[occurrence_index]
-        patch = deep_diff(upstream_item, item)
-        if patch:
-            patches[reference] = patch
-
-    return {
-        "selected_refs": selected_refs,
-        "patches": patches,
-        "extra_items": extra_items,
-    }
-
-
-def apply_array_rules(
-    upstream_items: List[Dict[str, Any]],
-    key_field: str,
-    strategy: str,
-    rules: Optional[Dict[str, Any]],
-    append_new_items: bool = False,
-) -> List[Dict[str, Any]]:
-    if strategy == "upstream_all":
-        return copy.deepcopy(upstream_items)
-
-    if not rules:
-        return copy.deepcopy(upstream_items)
-
-    upstream_groups = group_items(upstream_items, key_field)
-    selected_items: List[Dict[str, Any]] = []
-    selected_refs: List[str] = rules.get("selected_refs", [])
-    selected_ref_set = set(selected_refs)
-    patches: Dict[str, Any] = rules.get("patches", {})
-    extra_items: Dict[str, Any] = rules.get("extra_items", {})
-
-    for reference in selected_refs:
-        item_key, occurrence_index = split_occurrence_ref(reference)
-        upstream_matches = upstream_groups.get(item_key, [])
-        if occurrence_index < len(upstream_matches):
-            item = copy.deepcopy(upstream_matches[occurrence_index])
-            patch = patches.get(reference)
-            if patch:
-                item = deep_patch(item, patch)
-            selected_items.append(item)
-            continue
-
-        if reference in extra_items:
-            selected_items.append(copy.deepcopy(extra_items[reference]))
-
-    if append_new_items:
-        seen_counts: Dict[str, int] = {}
-        for item in upstream_items:
-            item_key = item.get(key_field)
-            if item_key is None:
-                continue
-            occurrence_index = seen_counts.get(item_key, 0)
-            seen_counts[item_key] = occurrence_index + 1
-            reference = make_occurrence_ref(item_key, occurrence_index)
-            if reference in selected_ref_set:
-                continue
-            selected_items.append(copy.deepcopy(item))
-
-    return selected_items
-
-
-def derive_top_level_overrides(
-    previous_upstream: Dict[str, Any],
-    previous_publish: Dict[str, Any],
-    excluded_keys: Iterable[str],
-) -> Dict[str, Any]:
-    overrides: Dict[str, Any] = {}
-    excluded = set(excluded_keys)
-    keys = set(previous_publish) | set(previous_upstream)
-    for key in sorted(keys):
-        if key in excluded:
-            continue
-        if key not in previous_publish:
-            continue
-        upstream_value = previous_upstream.get(key)
-        publish_value = previous_publish.get(key)
-        patch = deep_diff(upstream_value, publish_value)
-        if patch is not None:
-            overrides[key] = patch
-    return overrides
-
-
-def prepare_publish_payload(
-    fetched_upstream: Dict[str, Any],
-    previous_upstream: Optional[Dict[str, Any]],
-    previous_publish: Optional[Dict[str, Any]],
-    profile_config: Dict[str, Any],
-) -> Dict[str, Any]:
-    publish = copy.deepcopy(fetched_upstream)
-    arrays = profile_config.get("arrays", {})
-    explicit_filters = profile_config.get("explicit_filters", {})
-
-    if previous_upstream is None or previous_publish is None:
-        for array_name, array_config in arrays.items():
-            strategy = array_config.get("strategy", "upstream_all")
-            append_new_items = bool(array_config.get("append_new_items", False))
-            items = publish.get(array_name, [])
-            if isinstance(items, list):
-                items = filter_items_by_rules(items, explicit_filters.get(array_name))
-                if strategy != "upstream_all":
-                    publish[array_name] = apply_array_rules(
-                        items,
-                        array_config["item_key"],
-                        strategy,
-                        None,
-                        append_new_items=append_new_items,
-                    )
-                    continue
-                publish[array_name] = apply_array_rules(
-                    items,
-                    array_config["item_key"],
-                    strategy,
-                    None,
-                    append_new_items=append_new_items,
-                )
-        publish = deep_patch(publish, profile_config.get("overrides", {}))
-        return publish
-
-    excluded_keys = set(arrays) | {"spider"}
-    top_level_overrides = derive_top_level_overrides(previous_upstream, previous_publish, excluded_keys)
-    if top_level_overrides:
-        publish = deep_patch(publish, top_level_overrides)
-
-    for array_name, array_config in arrays.items():
-        upstream_items = publish.get(array_name, [])
-        if not isinstance(upstream_items, list):
-            continue
-        upstream_items = filter_items_by_rules(upstream_items, explicit_filters.get(array_name))
-        strategy = array_config.get("strategy", "upstream_all")
-        append_new_items = bool(array_config.get("append_new_items", False))
-        rules = None
-        if strategy == "published_selection":
-            rules = derive_array_rules(
-                previous_upstream,
-                previous_publish,
-                array_name,
-                array_config["item_key"],
-            )
-        publish[array_name] = apply_array_rules(
-            upstream_items,
-            array_config["item_key"],
-            strategy,
-            rules,
-            append_new_items=append_new_items,
-        )
-        publish[array_name] = filter_items_by_rules(
-            publish[array_name],
-            explicit_filters.get(array_name),
-        )
-
-    publish = deep_patch(publish, profile_config.get("overrides", {}))
-    return publish
+) -> Tuple[Optional[bytes], List[str]]:
+    """Try to download spider from multiple sources."""
+    errors = []
+    for source in sources:
+        try:
+            content = read_bytes_from_source(source, timeout=spider_timeout, network=network)
+            if is_valid_jar_bytes(content):
+                return content, sources
+        except SyncError as exc:
+            errors.append(f"{source}: {exc}")
+        except Exception as exc:
+            errors.append(f"{source}: {exc}")
+    return None, errors
 
 
 def update_spider_field(
@@ -764,14 +235,21 @@ def update_spider_field(
     spider_source = strip_spider_suffix(spider_value)
     resolved_source = resolve_relative_reference(upstream_source, spider_source)
     spider_timeout = int(spider_config.get("timeout", 120))
+
+    # Build list of sources to try
+    spider_sources = [resolved_source]
+    for fallback in spider_config.get("fallback_sources", []):
+        fallback_normalized = normalize_source_url(fallback)
+        if fallback_normalized not in spider_sources:
+            spider_sources.append(fallback_normalized)
+
     target_path = ensure_relative_to_repo(repo_root, spider_config["download_to"])
     target_path.parent.mkdir(parents=True, exist_ok=True)
     previous_content = target_path.read_bytes() if target_path.exists() else None
 
     if dry_run:
-        # In dry-run mode, compute MD5 from current file (don't download)
         if previous_content is None:
-            print(f"[spider] dry-run: {target_path.relative_to(repo_root)} does not exist, would download from {resolved_source}")
+            print(f"[spider] dry-run: {target_path.relative_to(repo_root)} does not exist, would try {len(spider_sources)} sources")
             return None
         digest = md5_file(target_path)
         raw_base = compute_raw_base(repo_root, repo_config)
@@ -781,12 +259,29 @@ def update_spider_field(
             print(f"[spider] dry-run: would update spider URL")
         return None
 
-    new_content = read_bytes_from_source(resolved_source, timeout=spider_timeout, network=network)
-    if not is_valid_jar_bytes(new_content):
+    # Try sources
+    new_content = None
+    success_source = None
+    errors = []
+
+    for source in spider_sources:
+        content, errs = download_spider_with_fallback([source], spider_timeout, network)
+        if content is not None and is_valid_jar_bytes(content):
+            new_content = content
+            success_source = source
+            break
+        else:
+            errors.extend(errs)
+
+    if new_content is None:
         if previous_content is None:
-            raise SyncError(f"invalid spider file from {resolved_source}: not a jar/zip payload")
-        print(f"[spider] WARNING: invalid payload from {resolved_source}, keeping existing {target_path.relative_to(repo_root)}")
+            raise SyncError(f"invalid spider from all sources: {'; '.join(errors[:3])}")
+        print(f"[spider] WARNING: all spider sources failed, keeping existing {target_path.relative_to(repo_root)}")
         new_content = previous_content
+
+    if success_source and success_source != resolved_source:
+        print(f"[spider] primary source failed, used fallback: {success_source}")
+
     file_changed = previous_content != new_content
     if file_changed:
         target_path.write_bytes(new_content)
@@ -798,119 +293,48 @@ def update_spider_field(
     return target_path if file_changed else None
 
 
-def resolve_upstream_sources(repo_root: Path, profile_config: Dict[str, Any], cli_override: Optional[str]) -> List[str]:
-    candidates: List[str] = []
-    if cli_override:
-        candidates.append(normalize_source_url(cli_override))
-    else:
-        primary = profile_config.get("upstream_url")
-        if primary:
-            candidates.append(normalize_source_url(primary))
-        for fallback in profile_config.get("upstream_fallback_urls", []):
-            candidates.append(normalize_source_url(fallback))
+# --- Mirrors ---
 
-    if candidates:
-        deduped: List[str] = []
-        seen = set()
-        for item in candidates:
-            if item in seen:
-                continue
-            deduped.append(item)
-            seen.add(item)
-        return deduped
-
-    seed = profile_config.get("upstream_seed") or profile_config.get("upstream_output")
-    if not seed:
-        raise SyncError("no upstream_url or upstream_seed configured")
-
-    return [str(ensure_relative_to_repo(repo_root, seed))]
-
-
-def fetch_upstream_json(
-    sources: List[str],
-    timeout: int,
-    network: Optional[Dict[str, Any]] = None,
-) -> Tuple[str, Dict[str, Any]]:
-    errors: List[str] = []
-    for source in sources:
-        try:
-            payload = load_json_from_source(source, timeout=timeout, network=network)
-        except SyncError as exc:
-            errors.append(str(exc))
-            continue
-        if not isinstance(payload, dict):
-            errors.append(f"upstream {source} must be a JSON object")
-            continue
-        return source, payload
-
-    joined = "\n".join(errors)
-    raise SyncError(joined or "no upstream source available")
-
-
-def sync_profile(
+def generate_mirrors_config(
     repo_root: Path,
     repo_config: Dict[str, Any],
-    profile_name: str,
-    profile_config: Dict[str, Any],
-    upstream_override: Optional[str] = None,
-    network: Optional[Dict[str, Any]] = None,
-    dry_run: bool = False,
-) -> Dict[str, Any]:
-    upstream_output = ensure_relative_to_repo(repo_root, profile_config["upstream_output"])
-    publish_output = ensure_relative_to_repo(repo_root, profile_config["publish_output"])
+    profiles: Dict[str, Any],
+) -> Optional[Path]:
+    mirrors_config = repo_config.get("mirrors")
+    if not mirrors_config or not mirrors_config.get("enabled"):
+        return None
 
-    previous_upstream = load_json(upstream_output) if upstream_output.exists() else None
-    previous_publish = load_json(publish_output) if publish_output.exists() else None
-    if previous_upstream is not None and not isinstance(previous_upstream, dict):
-        raise SyncError(f"{upstream_output} must contain a JSON object")
-    if previous_publish is not None and not isinstance(previous_publish, dict):
-        raise SyncError(f"{publish_output} must contain a JSON object")
+    cdns = mirrors_config.get("cdns", [])
+    if not cdns:
+        return None
 
-    upstream_sources = resolve_upstream_sources(repo_root, profile_config, upstream_override)
-    fetch_timeout = int(profile_config.get("fetch_timeout", 60))
-    upstream_source, fetched_upstream = fetch_upstream_json(
-        upstream_sources,
-        timeout=fetch_timeout,
-        network=network,
-    )
-
-    publish_payload = prepare_publish_payload(
-        fetched_upstream,
-        previous_upstream,
-        previous_publish,
-        profile_config,
-    )
-    if isinstance(publish_payload.get("sites"), list) and not dry_run:
-        publish_payload["sites"] = apply_site_probes(
-            publish_payload["sites"],
-            profile_config.get("site_probes"),
-            network,
-        )
-
-    changed_files: List[Path] = []
-    if save_json(upstream_output, fetched_upstream, dry_run=dry_run):
-        changed_files.append(upstream_output)
-
-    spider_file = update_spider_field(
-        repo_root,
-        repo_config,
-        profile_config,
-        publish_payload,
-        upstream_source,
-        network=network,
-        dry_run=dry_run,
-    )
-    if spider_file is not None:
-        changed_files.append(spider_file)
-
-    if save_json(publish_output, publish_payload, dry_run=dry_run):
-        changed_files.append(publish_output)
-
-    return {
-        "profile": profile_name,
-        "source": upstream_source,
-        "changed_files": changed_files,
+    mirrors_payload: Dict[str, Any] = {
+        "version": 1,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "profiles": {},
     }
+
+    raw_base = compute_raw_base(repo_root, repo_config)
+    for profile_name, profile_config in profiles.items():
+        publish_output = ensure_relative_to_repo(repo_root, profile_config["publish_output"])
+        if not publish_output.exists():
+            continue
+
+        profile_cdns = []
+        for cdn in cdns:
+            cdn_base = cdn.rstrip("/")
+            profile_cdns.append(f"{cdn_base}/{publish_output.relative_to(repo_root)}")
+
+        mirrors_payload["profiles"][profile_name] = {
+            "config_url": f"{raw_base}/{publish_output.relative_to(repo_root)}",
+            "mirrors": profile_cdns,
+        }
+
+    mirrors_path = repo_root / "mirrors.json"
+    if save_json(mirrors_path, mirrors_payload):
+        print(f"[mirrors] generated mirrors.json with {len(cdns)} CDN endpoints")
+        return mirrors_path
+    return None
 
 
 def reconcile_spider_fields(
@@ -919,7 +343,7 @@ def reconcile_spider_fields(
     profiles: Dict[str, Any],
 ) -> List[Path]:
     raw_base = compute_raw_base(repo_root, repo_config)
-    changed_files: List[Path] = []
+    changed_files = []
 
     for profile_name, profile_config in profiles.items():
         spider_config = profile_config.get("spider")
@@ -948,48 +372,114 @@ def reconcile_spider_fields(
     return changed_files
 
 
-def run_git(repo_root: Path, args: List[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", "-C", str(repo_root), *args],
-        capture_output=True,
-        text=True,
-        check=False,
+# --- Sync core ---
+
+def resolve_upstream_sources(repo_root: Path, profile_config: Dict[str, Any], cli_override: Optional[str]) -> List[str]:
+    candidates = []
+    if cli_override:
+        candidates.append(normalize_source_url(cli_override))
+    else:
+        primary = profile_config.get("upstream_url")
+        if primary:
+            candidates.append(normalize_source_url(primary))
+        for fallback in profile_config.get("upstream_fallback_urls", []):
+            candidates.append(normalize_source_url(fallback))
+
+    if candidates:
+        seen = set()
+        deduped = []
+        for item in candidates:
+            if item not in seen:
+                seen.add(item)
+                deduped.append(item)
+        return deduped
+
+    seed = profile_config.get("upstream_seed") or profile_config.get("upstream_output")
+    if not seed:
+        raise SyncError("no upstream_url or upstream_seed configured")
+    return [str(ensure_relative_to_repo(repo_root, seed))]
+
+
+def fetch_upstream_json(
+    sources: List[str],
+    timeout: int,
+    network: Optional[Dict[str, Any]] = None,
+) -> Tuple[str, Dict[str, Any]]:
+    errors = []
+    for source in sources:
+        try:
+            payload = load_json_from_source(source, timeout=timeout, network=network)
+        except SyncError as exc:
+            errors.append(str(exc))
+            continue
+        if not isinstance(payload, dict):
+            errors.append(f"upstream {source} must be a JSON object")
+            continue
+        return source, payload
+
+    raise SyncError(" | ".join(errors) or "no upstream source available")
+
+
+def sync_profile(
+    repo_root: Path,
+    repo_config: Dict[str, Any],
+    profile_name: str,
+    profile_config: Dict[str, Any],
+    upstream_override: Optional[str] = None,
+    network: Optional[Dict[str, Any]] = None,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    upstream_output = ensure_relative_to_repo(repo_root, profile_config["upstream_output"])
+    publish_output = ensure_relative_to_repo(repo_root, profile_config["publish_output"])
+
+    upstream_sources = resolve_upstream_sources(repo_root, profile_config, upstream_override)
+    fetch_timeout = int(profile_config.get("fetch_timeout", 60))
+    upstream_source, fetched_upstream = fetch_upstream_json(
+        upstream_sources,
+        timeout=fetch_timeout,
+        network=network,
     )
 
+    # Use upstream directly as publish payload
+    publish_payload = copy.deepcopy(fetched_upstream)
 
-def git_commit_and_push(repo_root: Path, files: List[Path], commit_message: str) -> None:
-    if not files:
-        return
+    changed_files = []
 
-    relative_files = [str(path.relative_to(repo_root)) for path in files]
-    add_result = run_git(repo_root, ["add", *relative_files])
-    if add_result.returncode != 0:
-        raise SyncError(add_result.stderr.strip() or "git add failed")
+    # Save upstream snapshot
+    if save_json(upstream_output, fetched_upstream, dry_run=dry_run):
+        changed_files.append(upstream_output)
 
-    diff_result = run_git(repo_root, ["diff", "--cached", "--quiet"])
-    if diff_result.returncode == 0:
-        return
-    if diff_result.returncode not in {0, 1}:
-        raise SyncError(diff_result.stderr.strip() or "git diff --cached failed")
+    # Update spider and save publish
+    spider_file = update_spider_field(
+        repo_root,
+        repo_config,
+        profile_config,
+        publish_payload,
+        upstream_source,
+        network=network,
+        dry_run=dry_run,
+    )
+    if spider_file is not None:
+        changed_files.append(spider_file)
 
-    commit_result = run_git(repo_root, ["commit", "-m", commit_message])
-    if commit_result.returncode != 0:
-        raise SyncError(commit_result.stderr.strip() or "git commit failed")
+    if save_json(publish_output, publish_payload, dry_run=dry_run):
+        changed_files.append(publish_output)
 
-    push_result = run_git(repo_root, ["push", "origin", "HEAD"])
-    if push_result.returncode != 0:
-        raise SyncError(push_result.stderr.strip() or "git push failed")
+    return {
+        "profile": profile_name,
+        "source": upstream_source,
+        "changed_files": changed_files,
+    }
 
+
+# --- Config ---
 
 def load_config(repo_root: Path, config_path: Path) -> Dict[str, Any]:
     config = load_json(config_path)
     if not isinstance(config, dict):
         raise SyncError("config file must contain a JSON object")
     config.setdefault("repo", {})
-    config.setdefault("rule_sets", {})
     config.setdefault("profiles", {})
-    if not isinstance(config["rule_sets"], dict):
-        raise SyncError("config.rule_sets must be an object")
     if not isinstance(config["profiles"], dict):
         raise SyncError("config.profiles must be an object")
     return config
@@ -1010,35 +500,7 @@ def resolve_network_config(config: Dict[str, Any], args: argparse.Namespace) -> 
     return network
 
 
-def resolve_profile_config(config: Dict[str, Any], profile_name: str) -> Dict[str, Any]:
-    profile = copy.deepcopy(config["profiles"].get(profile_name))
-    if profile is None:
-        raise SyncError(f"unknown profile: {profile_name}")
-
-    rule_set_name = profile.get("rule_set")
-    if not rule_set_name:
-        return profile
-
-    rule_set = config["rule_sets"].get(rule_set_name)
-    if rule_set is None:
-        raise SyncError(f"profile {profile_name} references missing rule_set: {rule_set_name}")
-
-    merged = copy.deepcopy(rule_set)
-    merged.update(profile)
-    if "arrays" in rule_set or "arrays" in profile:
-        arrays = copy.deepcopy(rule_set.get("arrays", {}))
-        arrays.update(profile.get("arrays", {}))
-        merged["arrays"] = arrays
-    if "overrides" in rule_set or "overrides" in profile:
-        overrides = copy.deepcopy(rule_set.get("overrides", {}))
-        overrides = deep_patch(overrides, profile.get("overrides", {}))
-        merged["overrides"] = overrides
-    if "explicit_filters" in rule_set or "explicit_filters" in profile:
-        explicit_filters = copy.deepcopy(rule_set.get("explicit_filters", {}))
-        explicit_filters = deep_patch(explicit_filters, profile.get("explicit_filters", {}))
-        merged["explicit_filters"] = explicit_filters
-    return merged
-
+# --- Commands ---
 
 def cmd_list(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo_root).resolve()
@@ -1048,7 +510,7 @@ def cmd_list(args: argparse.Namespace) -> int:
     proxy_text = network.get("proxy_url") if network.get("proxy_mode") != "off" else "(disabled)"
     print(f"proxy\t{network.get('proxy_mode', 'prefer')}\t{proxy_text}")
     for name in sorted(config["profiles"]):
-        profile = resolve_profile_config(config, name)
+        profile = config["profiles"].get(name, {})
         upstream_url = profile.get("upstream_url") or "(unset)"
         print(f"{name}\t{profile.get('publish_output')}\t{upstream_url}")
     return 0
@@ -1074,17 +536,13 @@ def cmd_show_rules(args: argparse.Namespace) -> int:
     config = load_config(repo_root, config_path)
     network = resolve_network_config(config, args)
 
-    if args.profile:
-        names = [args.profile]
-    else:
-        names = sorted(config["profiles"])
-
+    print(f"- 同步逻辑: 极简主义 - 上游增就增，上游删就删，上游变就变")
     print(f"- 代理模式: {network.get('proxy_mode', 'prefer')}")
     print(f"- 代理地址: {network.get('proxy_url') or '(未设置)'}")
     print()
 
-    for name in names:
-        profile = resolve_profile_config(config, name)
+    for name in sorted(config["profiles"]):
+        profile = config["profiles"].get(name, {})
         print(f"[{name}] {profile.get('description', '')}".strip())
         print(f"- 上游链接: {profile.get('upstream_url') or '(未设置)'}")
         fallback_urls = profile.get("upstream_fallback_urls") or []
@@ -1092,35 +550,137 @@ def cmd_show_rules(args: argparse.Namespace) -> int:
             print(f"- 候补链接: {', '.join(fallback_urls)}")
         print(f"- 上游留底: {profile.get('upstream_output')}")
         print(f"- 对外发布: {profile.get('publish_output')}")
-        print(f"- 规则集: {profile.get('rule_set') or '内联规则'}")
-        explicit_filters = profile.get("explicit_filters", {}).get("sites", {})
-        if explicit_filters:
-            retain_keywords = explicit_filters.get("retain_keywords", [])
-            drop_keywords = explicit_filters.get("drop_keywords", [])
-            if retain_keywords:
-                print(f"- 站点显式保留关键词: {', '.join(retain_keywords)}")
-            if drop_keywords:
-                print(f"- 站点显式删除关键词: {', '.join(drop_keywords)}")
-        site_probes = profile.get("site_probes", {})
-        if site_probes.get("enabled"):
-            print(
-                "- 站点测速剔除: "
-                f"开启, 超时 {site_probes.get('timeout', 6)}s, "
-                f"首包阈值 {site_probes.get('max_time_starttransfer_ms', 4000)}ms"
-            )
-        print("- 当前清洗规则:")
-        print("  1. 抓取上游原始 JSON，保存为留底文件")
-        print("  2. `sites` 先按显式关键词规则过滤，再按当前发布文件的保留项、顺序和改名规则生成")
-        print("     同时自动补进上游新出现、且没命中删除规则的新源")
-        print("  3. 最终发布结果会再执行一次显式规则过滤，避免旧条目被继承回来")
-        print("  4. 对最终保留的 `sites` 做可达性和基础速度探测，剔除失效或明显过慢的源")
-        print("  5. `lives` 直接跟随上游最新内容")
-        print("  6. 其他顶层字段默认沿用你当前发布文件里已经形成的人工改动")
-        print("  7. `spider.jar` 下载到仓库，再改写成 GitHub Raw 地址和最新 MD5")
-        print("  8. 如果上游返回的不是有效 jar，而是网页或报错页，就保留仓库里现有的 jar")
-        print("  9. 因为主/副配置共用同一个 `jar/spider.jar`，两个文件的 spider MD5 会自动保持一致")
         print()
+
+    print("工作方式:")
+    print("  1. 抓取上游原始 JSON，保存为留底文件")
+    print("  2. 直接使用上游内容作为发布文件（不做过滤、不做测速）")
+    print("  3. spider.jar 下载到仓库，改写成 GitHub Raw 地址 + MD5")
+    print("  4. spider 多源兜底，失败时自动切换")
+    print("  5. mirrors.json 提供多 CDN 出口")
+    print()
     return 0
+
+
+def check_url_health(url: str, timeout: int, network: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    errors = []
+    for mode, proxy_url in build_fetch_attempts(network):
+        cmd = [
+            "curl", "-fsSL",
+            "-A", "eggtv-healthcheck/1.0",
+            "--connect-timeout", str(min(timeout, 20)),
+            "--max-time", str(timeout),
+            "-o", "/dev/null",
+            "-w", "%{http_code}\t%{time_starttransfer}\t%{time_total}",
+        ]
+        if proxy_url:
+            cmd.extend(["--proxy", proxy_url])
+        cmd.append(url)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            parts = result.stdout.strip().split("\t")
+            if len(parts) >= 3:
+                http_code, ttfb, total = parts
+                return {
+                    "url": url,
+                    "http_code": int(http_code),
+                    "time_starttransfer_ms": float(ttfb) * 1000.0,
+                    "time_total_ms": float(total) * 1000.0,
+                    "reachable": True,
+                }
+        errors.append(f"{mode}: {result.stderr.strip() or 'curl failed'}")
+    return {
+        "url": url,
+        "reachable": False,
+        "error": " | ".join(errors),
+    }
+
+
+def cmd_health(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve()
+    config_path = (repo_root / args.config).resolve()
+    config = load_config(repo_root, config_path)
+    network = resolve_network_config(config, args)
+    timeout = int(getattr(args, "timeout", 15))
+
+    print(f"=== 蛋壳影院片源健康检查 ===")
+    print(f"检查时间: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    print()
+
+    all_ok = True
+
+    # Check upstream sources
+    print("--- 上游片源 ---")
+    for name in sorted(config["profiles"]):
+        profile = config["profiles"].get(name, {})
+        upstream_url = profile.get("upstream_url")
+        if not upstream_url:
+            print(f"[{name}] 上游: (未配置)")
+            continue
+
+        result = check_url_health(upstream_url, timeout, network)
+        if result["reachable"]:
+            print(f"[{name}] 上游: OK -> HTTP {result['http_code']}, {result['time_starttransfer_ms']:.0f}ms")
+        else:
+            print(f"[{name}] 上游: FAIL -> {result['error'][:80]}")
+            all_ok = False
+
+        for fallback in profile.get("upstream_fallback_urls", []):
+            fb_result = check_url_health(fallback, timeout, network)
+            if fb_result["reachable"]:
+                print(f"  └─ 候补: OK ({fb_result['time_starttransfer_ms']:.0f}ms)")
+            else:
+                print(f"  └─ 候补: FAIL")
+
+    print()
+
+    # Check spider JAR
+    print("--- Spider JAR ---")
+    spider_file = repo_root / "jar" / "spider.jar"
+    if spider_file.exists():
+        digest = md5_file(spider_file)
+        size_kb = spider_file.stat().st_size // 1024
+        print(f"spider.jar: OK ({size_kb} KB, md5: {digest[:12]}...)")
+    else:
+        print(f"spider.jar: 缺失!")
+        all_ok = False
+
+    print()
+
+    # Check CDN mirrors
+    mirrors_config = config.get("repo", {}).get("mirrors", {})
+    if mirrors_config.get("enabled"):
+        cdns = mirrors_config.get("cdns", [])
+        print("--- CDN 镜像 ---")
+        for cdn in cdns:
+            print(f"CDN: {cdn}")
+        print()
+
+    # Check publish files
+    print("--- 发布文件 ---")
+    for name in sorted(config["profiles"]):
+        profile = config["profiles"].get(name, {})
+        publish_path = repo_root / profile.get("publish_output", "")
+        if publish_path.exists():
+            size_kb = publish_path.stat().st_size // 1024
+            try:
+                payload = load_json(publish_path)
+                sites_count = len(payload.get("sites", [])) if isinstance(payload, dict) else 0
+                print(f"[{name}] {publish_path.name}: OK ({size_kb} KB, {sites_count} sites)")
+            except Exception as e:
+                print(f"[{name}] {publish_path.name}: 解析失败 ({e})")
+                all_ok = False
+        else:
+            print(f"[{name}] {publish_path.name}: 缺失!")
+            all_ok = False
+
+    print()
+    if all_ok:
+        print("状态: 全部正常")
+        return 0
+    else:
+        print("状态: 存在问题，请检查上述 FAIL 项")
+        return 1
 
 
 def collect_target_profiles(config: Dict[str, Any], args: argparse.Namespace) -> List[str]:
@@ -1141,13 +701,13 @@ def cmd_sync(args: argparse.Namespace) -> int:
     repo_config = config["repo"]
     network = resolve_network_config(config, args)
     target_profiles = collect_target_profiles(config, args)
-    changed_files: List[Path] = []
+    changed_files = []
     dry_run = getattr(args, "dry_run", False)
     show_diff = getattr(args, "diff", False)
 
     for name in target_profiles:
         upstream_override = args.upstream_url if len(target_profiles) == 1 else None
-        profile_config = resolve_profile_config(config, name)
+        profile_config = config["profiles"].get(name, {})
         result = sync_profile(
             repo_root,
             repo_config,
@@ -1158,7 +718,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
             dry_run=dry_run,
         )
         changed_files.extend(result["changed_files"])
-        changed_summary = ", ".join(str(path.relative_to(repo_root)) for path in result["changed_files"]) or "no file changes"
+        changed_summary = ", ".join(str(p.relative_to(repo_root)) for p in result["changed_files"]) or "no file changes"
         action = "[dry-run] would change" if dry_run else "->"
         print(f"[{name}] {result['source']} {action} {changed_summary}")
 
@@ -1166,16 +726,19 @@ def cmd_sync(args: argparse.Namespace) -> int:
             for changed_path in result["changed_files"]:
                 _show_file_diff(repo_root, changed_path)
 
-    resolved_profiles = {name: resolve_profile_config(config, name) for name in config["profiles"]}
+    resolved_profiles = {name: config["profiles"].get(name, {}) for name in config["profiles"]}
     if not dry_run:
         changed_files.extend(reconcile_spider_fields(repo_root, repo_config, resolved_profiles))
+        mirror_file = generate_mirrors_config(repo_root, repo_config, resolved_profiles)
+        if mirror_file:
+            changed_files.append(mirror_file)
 
     if dry_run:
         print("[dry-run] no files were written")
         return 0
 
     if args.push:
-        unique_files = sorted(set(changed_files), key=lambda path: str(path))
+        unique_files = sorted(set(changed_files), key=lambda p: str(p))
         commit_message = args.commit_message or f"chore(sync): refresh {'/'.join(target_profiles)}"
         git_commit_and_push(repo_root, unique_files, commit_message)
         print("git push completed")
@@ -1184,7 +747,6 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
 
 def _show_file_diff(repo_root: Path, file_path: Path) -> None:
-    """Show a unified diff of a JSON file against the last committed version."""
     try:
         result = run_git(repo_root, ["diff", "HEAD", "--", str(file_path.relative_to(repo_root))])
         if result.stdout.strip():
@@ -1194,69 +756,63 @@ def _show_file_diff(repo_root: Path, file_path: Path) -> None:
         pass
 
 
+def git_commit_and_push(repo_root: Path, files: List[Path], commit_message: str) -> None:
+    if not files:
+        return
+    relative_files = [str(p.relative_to(repo_root)) for p in files]
+    add_result = run_git(repo_root, ["add", *relative_files])
+    if add_result.returncode != 0:
+        raise SyncError(add_result.stderr.strip() or "git add failed")
+    diff_result = run_git(repo_root, ["diff", "--cached", "--quiet"])
+    if diff_result.returncode == 0:
+        return
+    if diff_result.returncode not in {0, 1}:
+        raise SyncError(diff_result.stderr.strip() or "git diff --cached failed")
+    commit_result = run_git(repo_root, ["commit", "-m", commit_message])
+    if commit_result.returncode != 0:
+        raise SyncError(commit_result.stderr.strip() or "git commit failed")
+    push_result = run_git(repo_root, ["push", "origin", "HEAD"])
+    if push_result.returncode != 0:
+        raise SyncError(push_result.stderr.strip() or "git push failed")
+
+
+# --- CLI ---
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Sync curated upstream TVBox source files")
-    parser.add_argument(
-        "--repo-root",
-        default=".",
-        help="repository root containing eggtv_sync.json (default: current directory)",
-    )
-    parser.add_argument(
-        "--config",
-        default="eggtv_sync.json",
-        help="path to the config file relative to repo root",
-    )
-    parser.add_argument(
-        "--proxy",
-        help="proxy URL, for example http://127.0.0.1:7890",
-    )
-    parser.add_argument(
-        "--no-proxy",
-        action="store_true",
-        help="disable proxy for this run",
-    )
+    parser = argparse.ArgumentParser(description="Sync TVBox sources from upstream")
+    parser.add_argument("--repo-root", default=".", help="repository root")
+    parser.add_argument("--config", default="eggtv_sync.json", help="config file path")
+    parser.add_argument("--proxy", help="proxy URL")
+    parser.add_argument("--no-proxy", action="store_true", help="disable proxy")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    list_parser = subparsers.add_parser("list", help="list configured profiles")
+    list_parser = subparsers.add_parser("list", help="list profiles")
     list_parser.set_defaults(func=cmd_list)
 
-    set_url_parser = subparsers.add_parser("set-url", help="set the upstream URL for a profile")
+    set_url_parser = subparsers.add_parser("set-url", help="set upstream URL")
     set_url_parser.add_argument("profile", help="profile name")
-    set_url_parser.add_argument("url", help="upstream JSON URL")
+    set_url_parser.add_argument("url", help="upstream URL")
     set_url_parser.set_defaults(func=cmd_set_url)
 
-    show_rules_parser = subparsers.add_parser("show-rules", help="show the current cleaning rules")
-    show_rules_parser.add_argument("profile", nargs="?", help="optional profile name")
+    show_rules_parser = subparsers.add_parser("show-rules", help="show sync rules")
+    show_rules_parser.add_argument("profile", nargs="?", help="profile name")
     show_rules_parser.set_defaults(func=cmd_show_rules)
 
-    sync_parser = subparsers.add_parser("sync", help="sync one or more profiles")
-    sync_parser.add_argument("profiles", nargs="*", help="profile names to sync")
-    sync_parser.add_argument("--all", action="store_true", help="sync every configured profile")
-    sync_parser.add_argument(
-        "--upstream-url",
-        help="override the upstream URL for a single sync run",
-    )
-    sync_parser.add_argument(
-        "--push",
-        action="store_true",
-        help="commit and push changed files after syncing",
-    )
-    sync_parser.add_argument(
-        "--commit-message",
-        help="git commit message used with --push",
-    )
-    sync_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="show what would be changed without writing files",
-    )
-    sync_parser.add_argument(
-        "--diff",
-        action="store_true",
-        help="show detailed diff of changes after sync",
-    )
+    health_parser = subparsers.add_parser("health", help="check health")
+    health_parser.add_argument("--timeout", type=int, default=15)
+    health_parser.set_defaults(func=cmd_health)
+
+    sync_parser = subparsers.add_parser("sync", help="sync sources")
+    sync_parser.add_argument("profiles", nargs="*", help="profile names")
+    sync_parser.add_argument("--all", action="store_true", help="sync all")
+    sync_parser.add_argument("--upstream-url", help="override upstream URL")
+    sync_parser.add_argument("--push", action="store_true", help="commit and push")
+    sync_parser.add_argument("--commit-message", help="commit message")
+    sync_parser.add_argument("--dry-run", action="store_true", help="preview only")
+    sync_parser.add_argument("--diff", action="store_true", help="show diff")
     sync_parser.set_defaults(func=cmd_sync)
+
     return parser
 
 
@@ -1268,9 +824,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     except SyncError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    except subprocess.CalledProcessError as exc:
-        print(exc.stderr or str(exc), file=sys.stderr)
-        return exc.returncode or 1
 
 
 if __name__ == "__main__":

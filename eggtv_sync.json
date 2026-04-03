@@ -2,143 +2,52 @@
   "version": 1,
   "repo": {
     "github_repo": "1072103612/eggtv",
-    "branch": "main"
+    "branch": "main",
+    "mirrors": {
+      "enabled": true,
+      "cdns": [
+        "https://raw.githubusercontent.com/1072103612/eggtv/main",
+        "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main",
+        "https://mirror.ghproxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main"
+      ]
+    }
   },
   "network": {
     "proxy_url": "http://127.0.0.1:7890",
     "proxy_mode": "prefer"
   },
-  "rule_sets": {
-    "shared_release_rules": {
-      "description": "主配置和副配置共用的清洗规则",
-      "arrays": {
-        "sites": {
-          "item_key": "key",
-          "strategy": "published_selection",
-          "append_new_items": true
-        },
-        "lives": {
-          "item_key": "name",
-          "strategy": "upstream_all"
-        }
-      },
-      "explicit_filters": {
-        "sites": {
-          "search_fields": [
-            "key",
-            "name",
-            "api"
-          ],
-          "drop_keywords": [
-            "哔哩",
-            "b站",
-            "bilibili",
-            "少儿",
-            "小学",
-            "初中",
-            "高中",
-            "儿童",
-            "教育",
-            "课堂",
-            "听书",
-            "音乐",
-            "dj",
-            "相声",
-            "小品",
-            "戏曲",
-            "广播",
-            "播客",
-            "短剧",
-            "看球",
-            "体育",
-            "直播",
-            "急救",
-            "养生",
-            "网易公版",
-            "酷6网",
-            "手机",
-            "推送",
-            "应用商店",
-            "應用商店",
-            "配置接口完全免费",
-            "请勿相信视频中任何广告",
-            "广告",
-            "网盘",
-            "云盘",
-            "阿里",
-            "夸克",
-            "百度",
-            "uc",
-            "搜索",
-            "搜狗",
-            "聚合",
-            "官源",
-            "本地包更新",
-            "本地更新",
-            "播放接口",
-            "免费",
-            "4k",
-            "扫码",
-            "二维码",
-            "wechat",
-            "微信",
-            "qq扫码"
-          ],
-          "drop_field_keywords": {
-            "api": [
-              "csp_Pan",
-              "Sou",
-              "Search"
-            ]
-          }
-        }
-      },
-      "site_probes": {
-        "enabled": true,
-        "probe_fields": [
-          "api",
-          "ext"
-        ],
-        "max_urls_per_site": 1,
-        "max_workers": 8,
-        "connect_timeout": 3,
-        "timeout": 6,
-        "max_time_starttransfer_ms": 4000,
-        "min_size_for_speed_check": 262144,
-        "min_speed_bytes_per_sec": 12000
-      }
-    }
-  },
   "profiles": {
     "tvbox": {
       "description": "主配置",
-      "rule_set": "shared_release_rules",
       "upstream_url": "http://156.238.235.72:1111/jjzzVIP110.json",
       "fetch_timeout": 60,
-      "upstream_seed": "tvbox_upstream.json",
       "upstream_output": "tvbox_upstream.json",
       "publish_output": "tvbox_config.json",
       "spider": {
         "download_to": "jar/spider.jar",
         "publish_path": "jar/spider.jar",
-        "timeout": 120
+        "timeout": 120,
+        "fallback_sources": [
+          "https://cdn.jsdelivr.net/gh/qist/tvbox@master/spider.jar"
+        ]
       }
     },
     "jsm": {
       "description": "副配置",
-      "rule_set": "shared_release_rules",
       "upstream_url": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
       "upstream_fallback_urls": [
         "https://cdn.jsdelivr.net/gh/qist/tvbox@master/jsm.json"
       ],
       "fetch_timeout": 120,
-      "upstream_seed": "jsm_upstream.json",
       "upstream_output": "jsm_upstream.json",
       "publish_output": "jsm_backup.json",
       "spider": {
         "download_to": "jar/spider.jar",
         "publish_path": "jar/spider.jar",
-        "timeout": 120
+        "timeout": 120,
+        "fallback_sources": [
+          "https://cdn.jsdelivr.net/gh/qist/tvbox@master/spider.jar"
+        ]
       }
     }
   }
