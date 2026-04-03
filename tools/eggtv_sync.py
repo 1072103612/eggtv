@@ -42,12 +42,20 @@ def save_json(path: Path, data: JsonValue, dry_run: bool = False) -> bool:
     if previous == serialized:
         return False
     if not dry_run:
-        path.write_text(serialized, encoding="utf-8")
+        # 原子写入：先写临时文件，再 rename
+        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        tmp_path.write_text(serialized, encoding="utf-8")
+        tmp_path.rename(path)
     return True
 
 
 def is_http_url(value: str) -> bool:
     return urllib.parse.urlparse(value).scheme in {"http", "https"}
+
+
+def clamp_timeout(value: int, min_val: int = 5, max_val: int = 300) -> int:
+    """确保超时值在合理范围内，防止零超时或极长等待。"""
+    return max(min_val, min(max_val, value))
 
 
 def normalize_source_url(source: str) -> str:
@@ -250,7 +258,7 @@ def update_spider_field(
 
     spider_source = strip_spider_suffix(spider_value)
     resolved_source = resolve_relative_reference(upstream_source, spider_source)
-    spider_timeout = int(spider_config.get("timeout", 120))
+    spider_timeout = clamp_timeout(int(spider_config.get("timeout", 120)))
 
     # Build list of sources to try
     spider_sources = [resolved_source]
@@ -303,8 +311,8 @@ def update_spider_field(
         target_path.write_bytes(new_content)
 
     digest = md5_file(target_path)
-    raw_base = compute_raw_base(repo_root, repo_config)
-    publish_path = spider_config.get("publish_path", spider_config["download_to"]).lstrip("/")
+    raw_base = compute_raw_base(repo_root, repo_config).rstrip("/")
+    publish_path = spider_config.get("publish_path", spider_config["download_to"]).strip("/")
     publish_payload["spider"] = f"{raw_base}/{publish_path};md5;{digest}"
     return target_path if file_changed else None
 
@@ -449,7 +457,7 @@ def sync_profile(
     publish_output = ensure_relative_to_repo(repo_root, profile_config["publish_output"])
 
     upstream_sources = resolve_upstream_sources(repo_root, profile_config, upstream_override)
-    fetch_timeout = int(profile_config.get("fetch_timeout", 60))
+    fetch_timeout = clamp_timeout(int(profile_config.get("fetch_timeout", 60)))
     upstream_source, fetched_upstream = fetch_upstream_json(
         upstream_sources,
         timeout=fetch_timeout,
