@@ -14,6 +14,7 @@ The workflow this script supports is:
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import copy
 import hashlib
 import json
@@ -21,6 +22,7 @@ import re
 import subprocess
 import sys
 import urllib.parse
+from concurrent.futures import as_completed
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -40,13 +42,14 @@ def load_json(path: Path) -> JsonValue:
         return json.load(handle)
 
 
-def save_json(path: Path, data: JsonValue) -> bool:
+def save_json(path: Path, data: JsonValue, dry_run: bool = False) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     previous = path.read_text(encoding="utf-8") if path.exists() else None
     if previous == serialized:
         return False
-    path.write_text(serialized, encoding="utf-8")
+    if not dry_run:
+        path.write_text(serialized, encoding="utf-8")
     return True
 
 
@@ -377,7 +380,15 @@ def filter_items_by_rules(
 
 
 def extract_urls_from_text(value: str) -> List[str]:
-    return [match.rstrip(").") for match in URL_PATTERN.findall(value)]
+    urls = []
+    for match in URL_PATTERN.findall(value):
+        # Strip trailing ) or . that was captured as part of URL from surrounding context
+        # Strip one char at a time to avoid over-stripping
+        while match and match[-1] in ").":
+            match = match[:-1]
+        if match:
+            urls.append(match)
+    return urls
 
 
 def collect_probe_urls(value: JsonValue) -> List[str]:
@@ -467,6 +478,36 @@ def is_probe_slow(probe: Dict[str, Any], probe_config: Dict[str, Any]) -> bool:
     return False
 
 
+def _probe_single_site(
+    site: Dict[str, Any],
+    probe_config: Dict[str, Any],
+    network: Optional[Dict[str, Any]],
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], Optional[str]]:
+    """Probe a single site, return (site_copy, best_probe, removal_reason)."""
+    timeout = int(probe_config.get("timeout", 6))
+    connect_timeout = int(probe_config.get("connect_timeout", 3))
+
+    probe_urls = extract_site_probe_urls(site, probe_config)
+    if not probe_urls:
+        return copy.deepcopy(site), None, None
+
+    best_probe: Optional[Dict[str, Any]] = None
+    for url in probe_urls:
+        probe = probe_url(url, timeout=timeout, connect_timeout=connect_timeout, network=network)
+        if probe is None:
+            continue
+        if best_probe is None or probe["time_starttransfer_ms"] < best_probe["time_starttransfer_ms"]:
+            best_probe = probe
+
+    if best_probe is None:
+        return copy.deepcopy(site), None, "no reachable endpoint"
+
+    if is_probe_slow(best_probe, probe_config):
+        return copy.deepcopy(site), best_probe, f"slow endpoint {int(best_probe['time_starttransfer_ms'])}ms"
+
+    return copy.deepcopy(site), best_probe, None
+
+
 def apply_site_probes(
     sites: List[Dict[str, Any]],
     probe_config: Optional[Dict[str, Any]],
@@ -475,37 +516,33 @@ def apply_site_probes(
     if not probe_config or not probe_config.get("enabled"):
         return copy.deepcopy(sites)
 
-    timeout = int(probe_config.get("timeout", 6))
-    connect_timeout = int(probe_config.get("connect_timeout", 3))
+    max_workers = int(probe_config.get("max_workers", 8))
+    sites_with_probes: List[Tuple[Dict[str, Any], Optional[Dict[str, Any]], Optional[str]]] = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(_probe_single_site, site, probe_config, network): site
+            for site in sites
+        }
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                sites_with_probes.append(result)
+            except Exception as exc:
+                site = futures[future]
+                print(f"[probe] error probing {site.get('name') or site.get('key')}: {exc}")
+                sites_with_probes.append((copy.deepcopy(site), None, None))
+
     kept_sites: List[Dict[str, Any]] = []
+    removed_count = 0
+    for site, best_probe, removal_reason in sites_with_probes:
+        if removal_reason is not None:
+            print(f"[probe] removed {site.get('name') or site.get('key')}: {removal_reason}")
+            removed_count += 1
+        else:
+            kept_sites.append(site)
 
-    for site in sites:
-        probe_urls = extract_site_probe_urls(site, probe_config)
-        if not probe_urls:
-            kept_sites.append(copy.deepcopy(site))
-            continue
-
-        best_probe: Optional[Dict[str, Any]] = None
-        for url in probe_urls:
-            probe = probe_url(url, timeout=timeout, connect_timeout=connect_timeout, network=network)
-            if probe is None:
-                continue
-            if best_probe is None or probe["time_starttransfer_ms"] < best_probe["time_starttransfer_ms"]:
-                best_probe = probe
-
-        if best_probe is None:
-            print(f"[probe] removed {site.get('name') or site.get('key')}: no reachable endpoint")
-            continue
-
-        if is_probe_slow(best_probe, probe_config):
-            print(
-                f"[probe] removed {site.get('name') or site.get('key')}: "
-                f"slow endpoint {int(best_probe['time_starttransfer_ms'])}ms"
-            )
-            continue
-
-        kept_sites.append(copy.deepcopy(site))
-
+    print(f"[probe] done: {len(sites)} sites, {removed_count} removed, {len(kept_sites)} kept")
     return kept_sites
 
 
@@ -714,6 +751,7 @@ def update_spider_field(
     publish_payload: Dict[str, Any],
     upstream_source: str,
     network: Optional[Dict[str, Any]] = None,
+    dry_run: bool = False,
 ) -> Optional[Path]:
     spider_config = profile_config.get("spider")
     if not spider_config:
@@ -729,11 +767,25 @@ def update_spider_field(
     target_path = ensure_relative_to_repo(repo_root, spider_config["download_to"])
     target_path.parent.mkdir(parents=True, exist_ok=True)
     previous_content = target_path.read_bytes() if target_path.exists() else None
+
+    if dry_run:
+        # In dry-run mode, compute MD5 from current file (don't download)
+        if previous_content is None:
+            print(f"[spider] dry-run: {target_path.relative_to(repo_root)} does not exist, would download from {resolved_source}")
+            return None
+        digest = md5_file(target_path)
+        raw_base = compute_raw_base(repo_root, repo_config)
+        publish_path = spider_config.get("publish_path", spider_config["download_to"]).lstrip("/")
+        new_spider_url = f"{raw_base}/{publish_path};md5;{digest}"
+        if new_spider_url != publish_payload.get("spider"):
+            print(f"[spider] dry-run: would update spider URL")
+        return None
+
     new_content = read_bytes_from_source(resolved_source, timeout=spider_timeout, network=network)
     if not is_valid_jar_bytes(new_content):
         if previous_content is None:
             raise SyncError(f"invalid spider file from {resolved_source}: not a jar/zip payload")
-        print(f"[spider] invalid payload from {resolved_source}, keeping existing {target_path.relative_to(repo_root)}")
+        print(f"[spider] WARNING: invalid payload from {resolved_source}, keeping existing {target_path.relative_to(repo_root)}")
         new_content = previous_content
     file_changed = previous_content != new_content
     if file_changed:
@@ -802,6 +854,7 @@ def sync_profile(
     profile_config: Dict[str, Any],
     upstream_override: Optional[str] = None,
     network: Optional[Dict[str, Any]] = None,
+    dry_run: bool = False,
 ) -> Dict[str, Any]:
     upstream_output = ensure_relative_to_repo(repo_root, profile_config["upstream_output"])
     publish_output = ensure_relative_to_repo(repo_root, profile_config["publish_output"])
@@ -827,7 +880,7 @@ def sync_profile(
         previous_publish,
         profile_config,
     )
-    if isinstance(publish_payload.get("sites"), list):
+    if isinstance(publish_payload.get("sites"), list) and not dry_run:
         publish_payload["sites"] = apply_site_probes(
             publish_payload["sites"],
             profile_config.get("site_probes"),
@@ -835,7 +888,7 @@ def sync_profile(
         )
 
     changed_files: List[Path] = []
-    if save_json(upstream_output, fetched_upstream):
+    if save_json(upstream_output, fetched_upstream, dry_run=dry_run):
         changed_files.append(upstream_output)
 
     spider_file = update_spider_field(
@@ -845,11 +898,12 @@ def sync_profile(
         publish_payload,
         upstream_source,
         network=network,
+        dry_run=dry_run,
     )
     if spider_file is not None:
         changed_files.append(spider_file)
 
-    if save_json(publish_output, publish_payload):
+    if save_json(publish_output, publish_payload, dry_run=dry_run):
         changed_files.append(publish_output)
 
     return {
@@ -1088,6 +1142,8 @@ def cmd_sync(args: argparse.Namespace) -> int:
     network = resolve_network_config(config, args)
     target_profiles = collect_target_profiles(config, args)
     changed_files: List[Path] = []
+    dry_run = getattr(args, "dry_run", False)
+    show_diff = getattr(args, "diff", False)
 
     for name in target_profiles:
         upstream_override = args.upstream_url if len(target_profiles) == 1 else None
@@ -1099,13 +1155,24 @@ def cmd_sync(args: argparse.Namespace) -> int:
             profile_config,
             upstream_override=upstream_override,
             network=network,
+            dry_run=dry_run,
         )
         changed_files.extend(result["changed_files"])
         changed_summary = ", ".join(str(path.relative_to(repo_root)) for path in result["changed_files"]) or "no file changes"
-        print(f"[{name}] {result['source']} -> {changed_summary}")
+        action = "[dry-run] would change" if dry_run else "->"
+        print(f"[{name}] {result['source']} {action} {changed_summary}")
+
+        if show_diff and result["changed_files"]:
+            for changed_path in result["changed_files"]:
+                _show_file_diff(repo_root, changed_path)
 
     resolved_profiles = {name: resolve_profile_config(config, name) for name in config["profiles"]}
-    changed_files.extend(reconcile_spider_fields(repo_root, repo_config, resolved_profiles))
+    if not dry_run:
+        changed_files.extend(reconcile_spider_fields(repo_root, repo_config, resolved_profiles))
+
+    if dry_run:
+        print("[dry-run] no files were written")
+        return 0
 
     if args.push:
         unique_files = sorted(set(changed_files), key=lambda path: str(path))
@@ -1114,6 +1181,17 @@ def cmd_sync(args: argparse.Namespace) -> int:
         print("git push completed")
 
     return 0
+
+
+def _show_file_diff(repo_root: Path, file_path: Path) -> None:
+    """Show a unified diff of a JSON file against the last committed version."""
+    try:
+        result = run_git(repo_root, ["diff", "HEAD", "--", str(file_path.relative_to(repo_root))])
+        if result.stdout.strip():
+            print(f"--- {file_path.relative_to(repo_root)}")
+            print(result.stdout)
+    except Exception:
+        pass
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1167,6 +1245,16 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser.add_argument(
         "--commit-message",
         help="git commit message used with --push",
+    )
+    sync_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="show what would be changed without writing files",
+    )
+    sync_parser.add_argument(
+        "--diff",
+        action="store_true",
+        help="show detailed diff of changes after sync",
     )
     sync_parser.set_defaults(func=cmd_sync)
     return parser
