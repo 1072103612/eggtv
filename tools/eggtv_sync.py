@@ -756,9 +756,52 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
             "renamed": r.get("renamed"),
             "changed_files": [str(p.relative_to(repo_root)) for p in r.get("changed_files", [])]
         })
-    report_path = repo_root / "sync_report.json"
-    save_json(report_path, report)
-    print(f"[report] 报告已生成: sync_report.json")
+
+    # 生成 Markdown 报告
+    md_lines = []
+    md_lines.append("# 🥚 蛋壳影院 - 同步报告")
+    md_lines.append("")
+    md_lines.append(f"**同步时间**: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    md_lines.append("")
+    md_lines.append("---")
+    md_lines.append("")
+
+    for r in results:
+        profile = r["profile"]
+        kept = r.get("sites_kept", 0)
+        removed = r.get("sites_removed", 0)
+        renamed = r.get("renamed")
+
+        md_lines.append(f"## 📺 {profile.upper()} 配置")
+        md_lines.append("")
+        md_lines.append(f"- **来源**: {r['source']}")
+        md_lines.append(f"- **保留站点**: {kept} 个 ✅")
+        md_lines.append(f"- **移除站点**: {removed} 个 🗑️")
+
+        if renamed:
+            md_lines.append(f"- **重命名**: {renamed['from']} → {renamed['to']}")
+
+        if removed > 0 and removed <= 20:
+            md_lines.append("")
+            md_lines.append("**移除的站点**:")
+            for name in r.get('removed_sites', []):
+                md_lines.append(f"- {name}")
+        elif removed > 20:
+            md_lines.append("")
+            md_lines.append(f"**移除的站点** (共 {removed} 个):")
+            for name in r.get('removed_sites', [])[:20]:
+                md_lines.append(f"- {name}")
+            md_lines.append(f"- ... 还有 {removed - 20} 个")
+
+        md_lines.append("")
+        md_lines.append("---")
+        md_lines.append("")
+
+    md_lines.append("*此报告由 eggtv-sync 自动生成*")
+
+    report_path = repo_root / "sync_report.md"
+    report_path.write_text("\n".join(md_lines), encoding="utf-8")
+    print(f"[report] 报告已生成: sync_report.md")
     return report_path
 
 
@@ -856,7 +899,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
     print("  ─────────────────────────────────────────")
     print(f"  ⏰ 同步时间: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC")
-    print(f"  📁 报告文件: sync_report.json")
+    print(f"  📁 报告文件: sync_report.md")
     print()
     print("╔══════════════════════════════════════════════════════════╗")
     print("║                    🎉 同步完成                          ║")
