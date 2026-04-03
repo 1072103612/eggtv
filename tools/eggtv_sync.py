@@ -807,14 +807,28 @@ def cmd_sync(args: argparse.Namespace) -> int:
         print("[dry-run] no files were written")
         return 0
 
+    # 生成同步报告
+    report_path = generate_sync_report(sync_results, repo_root)
+
     if args.push:
         unique_files = sorted(set(changed_files), key=lambda p: str(p))
+        unique_files.append(report_path)  # 报告也提交
         commit_message = args.commit_message or f"chore(sync): refresh {'/'.join(target_profiles)}"
         git_commit_and_push(repo_root, unique_files, commit_message)
         print("git push completed")
 
-    # 生成同步报告
-    generate_sync_report(sync_results, repo_root)
+    # 控制台摘要
+    print("\n" + "=" * 50)
+    print("同步摘要")
+    print("=" * 50)
+    for r in sync_results:
+        print(f"\n[{r['profile']}]")
+        print(f"  来源: {r['source']}")
+        print(f"  保留站点: {r.get('sites_kept', 0)} 个")
+        print(f"  移除站点: {r.get('sites_removed', 0)} 个")
+        if r.get('renamed'):
+            print(f"  重命名: {r['renamed']['from']} -> {r['renamed']['to']}")
+    print("\n" + "=" * 50)
 
     return 0
 
