@@ -817,18 +817,51 @@ def cmd_sync(args: argparse.Namespace) -> int:
         git_commit_and_push(repo_root, unique_files, commit_message)
         print("git push completed")
 
-    # 控制台摘要
-    print("\n" + "=" * 50)
-    print("同步摘要")
-    print("=" * 50)
+    # 控制台摘要（好看版）
+    print()
+    print("╔══════════════════════════════════════════════════════════╗")
+    print("║              🥚 蛋壳影院 - 同步报告                     ║")
+    print("╚══════════════════════════════════════════════════════════╝")
+    print()
+
     for r in sync_results:
-        print(f"\n[{r['profile']}]")
-        print(f"  来源: {r['source']}")
-        print(f"  保留站点: {r.get('sites_kept', 0)} 个")
-        print(f"  移除站点: {r.get('sites_removed', 0)} 个")
-        if r.get('renamed'):
-            print(f"  重命名: {r['renamed']['from']} -> {r['renamed']['to']}")
-    print("\n" + "=" * 50)
+        profile = r['profile']
+        kept = r.get('sites_kept', 0)
+        removed = r.get('sites_removed', 0)
+        renamed = r.get('renamed')
+
+        # 图标
+        emoji = "✅" if removed == 0 else "🔄"
+
+        print(f"  📺 {profile.upper()} 配置")
+        print(f"  ─────────────────────────────────────────")
+
+        if renamed:
+            print(f"  ✏️  重命名: {renamed['from']}")
+            print(f"     → {renamed['to']}")
+
+        print(f"  📊 站点统计:")
+        print(f"     保留: {kept} 个 ✅")
+        if removed > 0:
+            print(f"     移除: {removed} 个 🗑️")
+
+        if removed > 0 and removed <= 10:
+            print(f"  🗑️  移除的站点:")
+            for name in r.get('removed_sites', [])[:10]:
+                print(f"     - {name}")
+            if removed > 10:
+                print(f"     ... 还有 {removed - 10} 个")
+
+        print()
+
+    print("  ─────────────────────────────────────────")
+    print(f"  ⏰ 同步时间: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    print(f"  📁 报告文件: sync_report.json")
+    print()
+    print("╔══════════════════════════════════════════════════════════╗")
+    print("║                    🎉 同步完成                          ║")
+    print("╚══════════════════════════════════════════════════════════╝")
+    print()
 
     return 0
 
