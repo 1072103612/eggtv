@@ -128,6 +128,22 @@ def is_valid_jar_bytes(data: bytes) -> bool:
     return data[:4] in {b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"}
 
 
+def filter_sites(sites: List[Dict[str, Any]], block_keywords: List[str]) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """按站点名字过滤，命中关键字则删除，返回 (保留下来的, 被移除的)"""
+    if not block_keywords:
+        return sites, []
+    kept = []
+    removed = []
+    for site in sites:
+        name = site.get("name", "")
+        blocked = any(kw in name for kw in block_keywords)
+        if blocked:
+            removed.append(name)
+            continue
+        kept.append(site)
+    return kept, removed
+
+
 def ensure_relative_to_repo(repo_root: Path, relative_path: str) -> Path:
     candidate = (repo_root / relative_path).resolve()
     try:
@@ -443,6 +459,39 @@ def sync_profile(
     # Use upstream directly as publish payload
     publish_payload = copy.deepcopy(fetched_upstream)
 
+    # Track sync info for report
+    sync_info = {
+        "profile": profile_name,
+        "source": upstream_source,
+        "changed_files": [],
+        "sites_kept": 0,
+        "sites_removed": 0,
+        "removed_sites": [],
+        "renamed": None,
+    }
+
+    # 重命名第一个站点
+    rename_first = profile_config.get("rename_first")
+    if rename_first and "sites" in publish_payload and isinstance(publish_payload["sites"], list) and len(publish_payload["sites"]) > 0:
+        old_name = publish_payload["sites"][0].get("name", "")
+        publish_payload["sites"][0]["name"] = rename_first
+        sync_info["renamed"] = {"from": old_name, "to": rename_first}
+        print(f"[{profile_name}] rename: {old_name} -> {rename_first}")
+
+    # 清洗站点：过滤掉不需要的分类
+    block_keywords = profile_config.get("filter", {}).get("block_keywords", [])
+    if block_keywords and "sites" in publish_payload and isinstance(publish_payload["sites"], list):
+        original_count = len(publish_payload["sites"])
+        publish_payload["sites"], removed_names = filter_sites(publish_payload["sites"], block_keywords)
+        removed_count = original_count - len(publish_payload["sites"])
+        sync_info["sites_kept"] = len(publish_payload["sites"])
+        sync_info["sites_removed"] = removed_count
+        sync_info["removed_sites"] = removed_names
+        if removed_count > 0:
+            print(f"[{profile_name}] filter: 移除 {removed_count} 个站点")
+            for name in removed_names:
+                print(f"  - {name}")
+
     changed_files = []
 
     # Save upstream snapshot
@@ -465,11 +514,8 @@ def sync_profile(
     if save_json(publish_output, publish_payload, dry_run=dry_run):
         changed_files.append(publish_output)
 
-    return {
-        "profile": profile_name,
-        "source": upstream_source,
-        "changed_files": changed_files,
-    }
+    sync_info["changed_files"] = changed_files
+    return sync_info
 
 
 # --- Config ---
@@ -694,6 +740,28 @@ def collect_target_profiles(config: Dict[str, Any], args: argparse.Namespace) ->
     raise SyncError("select at least one profile or pass --all")
 
 
+def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path:
+    """生成同步报告"""
+    report = {
+        "sync_time": datetime.now(timezone.utc).isoformat(),
+        "profiles": []
+    }
+    for r in results:
+        report["profiles"].append({
+            "name": r["profile"],
+            "source": r["source"],
+            "sites_kept": r.get("sites_kept", 0),
+            "sites_removed": r.get("sites_removed", 0),
+            "removed_sites": r.get("removed_sites", []),
+            "renamed": r.get("renamed"),
+            "changed_files": [str(p.relative_to(repo_root)) for p in r.get("changed_files", [])]
+        })
+    report_path = repo_root / "sync_report.json"
+    save_json(report_path, report)
+    print(f"[report] 报告已生成: sync_report.json")
+    return report_path
+
+
 def cmd_sync(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo_root).resolve()
     config_path = (repo_root / args.config).resolve()
@@ -702,6 +770,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
     network = resolve_network_config(config, args)
     target_profiles = collect_target_profiles(config, args)
     changed_files = []
+    sync_results = []
     dry_run = getattr(args, "dry_run", False)
     show_diff = getattr(args, "diff", False)
 
@@ -718,6 +787,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
             dry_run=dry_run,
         )
         changed_files.extend(result["changed_files"])
+        sync_results.append(result)
         changed_summary = ", ".join(str(p.relative_to(repo_root)) for p in result["changed_files"]) or "no file changes"
         action = "[dry-run] would change" if dry_run else "->"
         print(f"[{name}] {result['source']} {action} {changed_summary}")
@@ -742,6 +812,9 @@ def cmd_sync(args: argparse.Namespace) -> int:
         commit_message = args.commit_message or f"chore(sync): refresh {'/'.join(target_profiles)}"
         git_commit_and_push(repo_root, unique_files, commit_message)
         print("git push completed")
+
+    # 生成同步报告
+    generate_sync_report(sync_results, repo_root)
 
     return 0
 

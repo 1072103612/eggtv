@@ -30,7 +30,11 @@
         "fallback_sources": [
           "https://cdn.jsdelivr.net/gh/qist/tvbox@master/spider.jar"
         ]
-      }
+      },
+      "filter": {
+        "block_keywords": ["4K", "8K", "软件", "扫码", "动漫", "二次元", "动画", "应用", "配置", "更新", "小品", "戏曲", "哔哩", "少儿", "儿童", "套餐", "歌曲", "美食", "演唱", "推送"]
+      },
+      "rename_first": "🎬欢迎来到蛋壳24h自助影院"
     },
     "jsm": {
       "description": "副配置",
@@ -48,6 +52,9 @@
         "fallback_sources": [
           "https://cdn.jsdelivr.net/gh/qist/tvbox@master/spider.jar"
         ]
+      },
+      "filter": {
+        "block_keywords": ["4K", "8K", "软件", "扫码", "动漫", "二次元", "动画", "应用", "應用商店", "配置", "本地", "新片", "短剧", "新番社", "我的", "搜索", "合集", "球", "体育", "音乐", "听书", "DJ", "戏曲", "直播", "小品", "相声", "哔哩", "少儿", "课堂", "急救", "教学", "知识", "百度", "聚合", "推送", "配置接口完全免费", "请勿相信视频中任何广告"]
       }
     }
   }
