@@ -98,7 +98,13 @@ def read_http_bytes(source: str, timeout: int = 30, network: Optional[Dict[str, 
         if proxy_url:
             cmd.extend(["--proxy", proxy_url])
         cmd.append(source)
-        result = subprocess.run(cmd, capture_output=True, check=False)
+        # curl --retry 2 最多 3 次尝试，加 buffer 防止 subprocess 僵死
+        process_timeout = timeout * 3 + 60
+        try:
+            result = subprocess.run(cmd, capture_output=True, check=False, timeout=process_timeout)
+        except subprocess.TimeoutExpired:
+            errors.append(f"{mode}: subprocess timed out after {process_timeout}s")
+            continue
         if result.returncode == 0:
             return result.stdout
         errors.append(f"{mode}: {result.stderr.decode('utf-8', errors='replace').strip() or 'curl failed'}")
