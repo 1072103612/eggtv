@@ -1,5 +1,5 @@
 {
-  "spider": "https://raw.githubusercontent.com/1072103612/eggtv/main/jar/spider.jar;md5;7d6b078abcc1fff233f95ddc1b1ebc6f",
+  "spider": "https://raw.githubusercontent.com/1072103612/eggtv/main/jar/spider.jar;md5;c9ab69944d02263529eeef038fe609e1",
   "lives": [
     {
       "name": "migu",
@@ -76,18 +76,14 @@
       }
     },
     {
-      "key": "czzyv",
-      "name": "厂长影视",
+      "key": "TVB云播",
+      "name": "TVB云播 | 影视",
       "type": 3,
-      "api": "csp_XBPQ",
+      "api": "./py/TVB云播.py",
       "searchable": 1,
       "quickSearch": 1,
-      "filterable": 1,
-      "changeable": 1,
-      "ext": "./json/厂长影视.json",
-      "header": {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
-      }
+      "filterable": 0,
+      "changeable": 1
     },
     {
       "key": "italkbbtv",
@@ -201,22 +197,6 @@
         "package": "com.android.packageinstaller",
         "buildNumber": "2002",
         "buildSignature": "A40DA80A59D170CAA950CF15C18C454D47A39B26989D8B640ECD745BA71BF5DC"
-      }
-    },
-    {
-      "key": "咕噜99",
-      "name": "咕噜丨APP",
-      "type": 3,
-      "api": "csp_App99",
-      "ext": {
-        "host": "http://103.45.132.22:19987/app/bn",
-        "LoginPath": "/app/log",
-        "appkey": "d1f0c269eab74d93821fffc9befdbbba",
-        "versionName": "1.9.5",
-        "name": "咕噜咕噜",
-        "package": "com.bd.tool.gulu",
-        "buildNumber": "2001",
-        "buildSignature": "B07C8F6DBEBD3ABEE6A4A4DE2BFBBF29A0AC3F984D532A39448EC3BF5DD36311"
       }
     },
     {
@@ -560,7 +540,7 @@
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 1,
-      "ext": "https://www.czzy89.com"
+      "ext": "https://cz01.vip"
     },
     {
       "key": "金牌影视",
@@ -574,6 +554,12 @@
       "name": "瓜子｜影视",
       "type": 3,
       "api": "csp_Gz360"
+    },
+    {
+      "key": "云播影视",
+      "name": "云播｜影视",
+      "type": 3,
+      "api": "csp_Tvyb"
     },
     {
       "key": "骚火影视",
