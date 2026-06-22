@@ -98,7 +98,13 @@ def read_http_bytes(source: str, timeout: int = 30, network: Optional[Dict[str, 
         if proxy_url:
             cmd.extend(["--proxy", proxy_url])
         cmd.append(source)
-        result = subprocess.run(cmd, capture_output=True, check=False)
+        # curl --retry 2 最多 3 次尝试，加 buffer 防止 subprocess 僵死
+        process_timeout = timeout * 3 + 60
+        try:
+            result = subprocess.run(cmd, capture_output=True, check=False, timeout=process_timeout)
+        except subprocess.TimeoutExpired:
+            errors.append(f"{mode}: subprocess timed out after {process_timeout}s")
+            continue
         if result.returncode == 0:
             return result.stdout
         errors.append(f"{mode}: {result.stderr.decode('utf-8', errors='replace').strip() or 'curl failed'}")
@@ -279,7 +285,10 @@ def update_spider_field(
         raw_base = compute_raw_base(repo_root, repo_config)
         publish_path = spider_config.get("publish_path", spider_config["download_to"]).lstrip("/")
         new_spider_url = f"{raw_base}/{publish_path};md5;{digest}"
-        if new_spider_url != publish_payload.get("spider"):
+        keep_spider = profile_config.get("keep_upstream_spider")
+        if keep_spider:
+            print(f"[spider] keep_upstream_spider: preserving original spider URL, jar backed up locally")
+        elif new_spider_url != publish_payload.get("spider"):
             print(f"[spider] dry-run: would update spider URL")
         return None
 
@@ -311,9 +320,12 @@ def update_spider_field(
         target_path.write_bytes(new_content)
 
     digest = md5_file(target_path)
-    raw_base = compute_raw_base(repo_root, repo_config).rstrip("/")
-    publish_path = spider_config.get("publish_path", spider_config["download_to"]).strip("/")
-    publish_payload["spider"] = f"{raw_base}/{publish_path};md5;{digest}"
+    if not profile_config.get("keep_upstream_spider"):
+        raw_base = compute_raw_base(repo_root, repo_config).rstrip("/")
+        publish_path = spider_config.get("publish_path", spider_config["download_to"]).strip("/")
+        publish_payload["spider"] = f"{raw_base}/{publish_path};md5;{digest}"
+    else:
+        print(f"[spider] keep_upstream_spider: preserving original spider URL")
     return target_path if file_changed else None
 
 
@@ -371,7 +383,7 @@ def reconcile_spider_fields(
 
     for profile_name, profile_config in profiles.items():
         spider_config = profile_config.get("spider")
-        if not spider_config:
+        if not spider_config or profile_config.get("keep_upstream_spider"):
             continue
 
         spider_file = ensure_relative_to_repo(repo_root, spider_config["download_to"])
