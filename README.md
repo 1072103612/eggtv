@@ -70,14 +70,16 @@ GitHub Actions 每 6 小时自动同步一次，也可手动触发：
 
 ### 主配置地址
 ```
-https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json
+https://1072103612.github.io/eggtv/tvbox_config.json
 ```
 
 ### 备用地址（任选其一）
 ```
 https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config.json
-https://mirror.ghproxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json
+https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json
 ```
+
+> ⚠️ `raw.githubusercontent.com` 在国内间歇性被墙，优先使用主配置地址（GitHub Pages）或 jsDelivr 备用地址。
 
 ### 副配置地址
 ```
