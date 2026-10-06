@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
-"""Sync TVBox sources from upstream to GitHub.
-
-Simple workflow:
-1. Fetch upstream JSON
-2. Save raw upstream snapshot
-3. Update spider.jar URLs to GitHub Raw
-4. Generate mirrors.json for CDN redundancy
-5. Save as publish file (same as upstream, just with updated spider URLs)
-"""
+"""Validate, clean and publish TVBox configs with independent playback tools."""
 
 from __future__ import annotations
 
 import argparse
 import copy
 import hashlib
+import io
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.parse
+import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -36,16 +33,16 @@ def load_json(path: Path) -> JsonValue:
 
 
 def save_json(path: Path, data: JsonValue, dry_run: bool = False) -> bool:
-    path.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     previous = path.read_text(encoding="utf-8") if path.exists() else None
     if previous == serialized:
         return False
     if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
         # 原子写入：先写临时文件，再 rename
         tmp_path = path.with_suffix(path.suffix + ".tmp")
         tmp_path.write_text(serialized, encoding="utf-8")
-        tmp_path.rename(path)
+        tmp_path.replace(path)
     return True
 
 
@@ -125,8 +122,8 @@ def read_bytes_from_source(source: str, timeout: int = 30, network: Optional[Dic
 
 def load_json_from_source(source: str, timeout: int = 30, network: Optional[Dict[str, Any]] = None) -> JsonValue:
     try:
-        return json.loads(read_bytes_from_source(source, timeout=timeout, network=network).decode("utf-8"))
-    except json.JSONDecodeError as exc:
+        return json.loads(read_bytes_from_source(source, timeout=timeout, network=network).decode("utf-8-sig"))
+    except (json.JSONDecodeError, UnicodeError) as exc:
         raise SyncError(f"invalid JSON from {source}: {exc}") from exc
 
 
@@ -139,7 +136,101 @@ def md5_file(path: Path) -> str:
 
 
 def is_valid_jar_bytes(data: bytes) -> bool:
-    return data[:4] in {b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"}
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            names = archive.namelist()
+            return (
+                any(name.endswith((".dex", ".class")) for name in names)
+                and archive.testzip() is None
+            )
+    except (zipfile.BadZipFile, OSError, RuntimeError, EOFError):
+        return False
+
+
+def jar_supports_sites(data: bytes, payload: Dict[str, Any]) -> bool:
+    if not is_valid_jar_bytes(data):
+        return False
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        names = set(archive.namelist())
+        dex = b"".join(archive.read(name) for name in names if name.endswith(".dex"))
+        for site in payload["sites"]:
+            api = site["api"]
+            if not api.startswith("csp_"):
+                continue
+            class_path = "com/github/catvod/spider/" + api[4:]
+            if class_path + ".class" not in names and ("L" + class_path + ";").encode() not in dex:
+                return False
+    return True
+
+
+def validate_source_payload(payload: JsonValue) -> None:
+    """Reject incomplete upstream responses before replacing a working config."""
+    if not isinstance(payload, dict):
+        raise SyncError("配置必须是 JSON 对象")
+    sites = payload.get("sites")
+    if not isinstance(sites, list) or not sites:
+        raise SyncError("片源站点为空，保留原配置")
+    if not isinstance(payload.get("spider"), str) or not payload["spider"].strip():
+        raise SyncError("缺少播放工具地址，保留原配置")
+    for site in sites:
+        if not isinstance(site, dict) or not all(
+            isinstance(site.get(field), str) and site[field].strip()
+            for field in ("key", "name", "api")
+        ):
+            raise SyncError("站点缺少名称、标识或接口，保留原配置")
+
+
+def resolve_payload_references(value: JsonValue, upstream_source: str, field: str = "") -> JsonValue:
+    """Keep upstream-relative scripts and nested resources usable after publishing."""
+    if isinstance(value, dict):
+        return {key: resolve_payload_references(item, upstream_source, key) for key, item in value.items()}
+    if isinstance(value, list):
+        return [resolve_payload_references(item, upstream_source, field) for item in value]
+    if isinstance(value, str) and is_http_url(upstream_source):
+        if value.startswith(("./", "../", "//")) or (
+            value.startswith("/") and field in {"api", "ext", "url", "spider", "wallpaper", "logo", "epg"}
+        ):
+            return urllib.parse.urljoin(upstream_source, value)
+    return value
+
+
+def all_strings(value: JsonValue) -> List[str]:
+    if isinstance(value, dict):
+        return [text for item in value.values() for text in all_strings(item)]
+    if isinstance(value, list):
+        return [text for item in value for text in all_strings(item)]
+    return [value] if isinstance(value, str) else []
+
+
+def resource_urls(payload: JsonValue) -> List[str]:
+    return sorted({value for value in all_strings(payload) if is_http_url(value)
+                   and urllib.parse.urlparse(value).path.lower().endswith((".js", ".py", ".json"))})
+
+
+def validate_relative_resources(original: Dict[str, Any], published: Dict[str, Any],
+                                source: str, network: Optional[Dict[str, Any]]) -> None:
+    if not is_http_url(source):
+        return
+    published_urls = set(resource_urls(published))
+    urls = sorted({urllib.parse.urljoin(source, value) for value in all_strings(original)
+                   if value.startswith(("./", "../", "/"))
+                   and urllib.parse.urljoin(source, value) in published_urls})
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        results = list(executor.map(lambda url: check_url_health(url, 15, network, kind="resource"), urls))
+    failures = [result["url"] for result in results if not result["reachable"]]
+    if failures:
+        raise SyncError("配套文件无法读取，保留原配置: " + ", ".join(failures))
+
+
+def deduplicate_sites(sites: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[str]]:
+    kept, removed, seen = [], [], set()
+    for site in sites:
+        if site["key"] in seen:
+            removed.append(site["name"])
+        else:
+            seen.add(site["key"])
+            kept.append(site)
+    return kept, removed
 
 
 def filter_sites(sites: List[Dict[str, Any]], block_keywords: List[str]) -> Tuple[List[Dict[str, Any]], List[str]]:
@@ -150,7 +241,7 @@ def filter_sites(sites: List[Dict[str, Any]], block_keywords: List[str]) -> Tupl
     removed = []
     for site in sites:
         name = site.get("name", "")
-        blocked = any(kw in name for kw in block_keywords)
+        blocked = any(kw.casefold() in name.casefold() for kw in block_keywords)
         if blocked:
             removed.append(name)
             continue
@@ -274,7 +365,8 @@ def update_spider_field(
             spider_sources.append(fallback_normalized)
 
     target_path = ensure_relative_to_repo(repo_root, spider_config["download_to"])
-    target_path.parent.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
     previous_content = target_path.read_bytes() if target_path.exists() else None
 
     if dry_run:
@@ -299,15 +391,17 @@ def update_spider_field(
 
     for source in spider_sources:
         content, errs = download_spider_with_fallback([source], spider_timeout, network)
-        if content is not None and is_valid_jar_bytes(content):
+        if content is not None and jar_supports_sites(content, publish_payload):
             new_content = content
             success_source = source
             break
         else:
             errors.extend(errs)
+            if content is not None:
+                errors.append(f"{source}: 播放工具不包含此配置需要的站点功能")
 
     if new_content is None:
-        if previous_content is None:
+        if previous_content is None or not jar_supports_sites(previous_content, publish_payload):
             raise SyncError(f"invalid spider from all sources: {'; '.join(errors[:3])}")
         print(f"[spider] WARNING: all spider sources failed, keeping existing {target_path.relative_to(repo_root)}")
         new_content = previous_content
@@ -317,7 +411,9 @@ def update_spider_field(
 
     file_changed = previous_content != new_content
     if file_changed:
-        target_path.write_bytes(new_content)
+        tmp_path = target_path.with_suffix(".jar.tmp")
+        tmp_path.write_bytes(new_content)
+        tmp_path.replace(target_path)
 
     digest = md5_file(target_path)
     if not profile_config.get("keep_upstream_spider"):
@@ -445,6 +541,7 @@ def fetch_upstream_json(
     for source in sources:
         try:
             payload = load_json_from_source(source, timeout=timeout, network=network)
+            validate_source_payload(payload)
         except SyncError as exc:
             errors.append(str(exc))
             continue
@@ -456,7 +553,7 @@ def fetch_upstream_json(
     raise SyncError(" | ".join(errors) or "no upstream source available")
 
 
-def sync_profile(
+def _sync_profile(
     repo_root: Path,
     repo_config: Dict[str, Any],
     profile_name: str,
@@ -477,7 +574,7 @@ def sync_profile(
     )
 
     # Use upstream directly as publish payload
-    publish_payload = copy.deepcopy(fetched_upstream)
+    publish_payload = resolve_payload_references(copy.deepcopy(fetched_upstream), upstream_source)
 
     # Track sync info for report
     sync_info = {
@@ -490,19 +587,13 @@ def sync_profile(
         "renamed": None,
     }
 
-    # 重命名第一个站点
-    rename_first = profile_config.get("rename_first")
-    if rename_first and "sites" in publish_payload and isinstance(publish_payload["sites"], list) and len(publish_payload["sites"]) > 0:
-        old_name = publish_payload["sites"][0].get("name", "")
-        publish_payload["sites"][0]["name"] = rename_first
-        sync_info["renamed"] = {"from": old_name, "to": rename_first}
-        print(f"[{profile_name}] rename: {old_name} -> {rename_first}")
-
     # 清洗站点：过滤掉不需要的分类
     block_keywords = profile_config.get("filter", {}).get("block_keywords", [])
-    if block_keywords and "sites" in publish_payload and isinstance(publish_payload["sites"], list):
+    if "sites" in publish_payload and isinstance(publish_payload["sites"], list):
         original_count = len(publish_payload["sites"])
         publish_payload["sites"], removed_names = filter_sites(publish_payload["sites"], block_keywords)
+        publish_payload["sites"], duplicate_names = deduplicate_sites(publish_payload["sites"])
+        removed_names.extend(duplicate_names)
         removed_count = original_count - len(publish_payload["sites"])
         sync_info["sites_kept"] = len(publish_payload["sites"])
         sync_info["sites_removed"] = removed_count
@@ -511,6 +602,18 @@ def sync_profile(
             print(f"[{profile_name}] filter: 移除 {removed_count} 个站点")
             for name in removed_names:
                 print(f"  - {name}")
+
+    for field in profile_config.get("filter", {}).get("drop_fields", []):
+        publish_payload.pop(field, None)
+    validate_source_payload(publish_payload)
+    validate_relative_resources(fetched_upstream, publish_payload, upstream_source, network)
+
+    # 先过滤再改名，避免欢迎语掩盖原站点类别。
+    rename_first = profile_config.get("rename_first")
+    if rename_first:
+        old_name = publish_payload["sites"][0]["name"]
+        publish_payload["sites"][0]["name"] = rename_first
+        sync_info["renamed"] = {"from": old_name, "to": rename_first}
 
     changed_files = []
 
@@ -536,6 +639,65 @@ def sync_profile(
 
     sync_info["changed_files"] = changed_files
     return sync_info
+
+
+def sync_profile(
+    repo_root: Path,
+    repo_config: Dict[str, Any],
+    profile_name: str,
+    profile_config: Dict[str, Any],
+    upstream_override: Optional[str] = None,
+    network: Optional[Dict[str, Any]] = None,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    # 下载、清洗及校验都成功后，才更新正式文件。
+    errors = []
+    for upstream_source in resolve_upstream_sources(repo_root, profile_config, upstream_override):
+        try:
+            result = stage_profile(repo_root, repo_config, profile_name, profile_config,
+                                   upstream_source, network, dry_run=dry_run)
+            result["using_fallback"] = upstream_source != normalize_source_url(profile_config.get("upstream_url", ""))
+            return result
+        except (SyncError, OSError, subprocess.SubprocessError) as exc:
+            errors.append(str(exc))
+            print(f"[{profile_name}] 此来源不完整，尝试候补: {upstream_source}")
+    raise SyncError(" | ".join(errors))
+
+
+def stage_profile(repo_root: Path, repo_config: Dict[str, Any], profile_name: str,
+                  profile_config: Dict[str, Any], upstream_source: str,
+                  network: Optional[Dict[str, Any]], dry_run: bool = False) -> Dict[str, Any]:
+    with tempfile.TemporaryDirectory(prefix="eggtv-sync-") as stage_dir:
+        stage_root = Path(stage_dir)
+        staged_config = copy.deepcopy(profile_config)
+        staged_config["upstream_url"] = upstream_source
+        staged_config["upstream_fallback_urls"] = []
+        if not is_http_url(staged_config["upstream_url"]):
+            staged_config["upstream_url"] = str(Path(staged_config["upstream_url"]).resolve())
+        seed_paths = [profile_config["publish_output"], profile_config["upstream_output"]]
+        if profile_config.get("spider"):
+            seed_paths.append(profile_config["spider"]["download_to"])
+        for relative_path in seed_paths:
+            source = ensure_relative_to_repo(repo_root, relative_path)
+            target = ensure_relative_to_repo(stage_root, relative_path)
+            if source.exists():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+        result = _sync_profile(stage_root, repo_config, profile_name, staged_config,
+                               network=network)
+        staged_payload = load_json(stage_root / profile_config["publish_output"])
+        validate_source_payload(staged_payload)
+        changed_files = []
+        for staged_path in result["changed_files"]:
+            target = ensure_relative_to_repo(repo_root, staged_path.relative_to(stage_root).as_posix())
+            if not dry_run:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                tmp_path = target.with_suffix(target.suffix + ".tmp")
+                shutil.copyfile(staged_path, tmp_path)
+                tmp_path.replace(target)
+            changed_files.append(target)
+        result["changed_files"] = changed_files
+        return result
 
 
 # --- Config ---
@@ -620,46 +782,79 @@ def cmd_show_rules(args: argparse.Namespace) -> int:
 
     print("工作方式:")
     print("  1. 抓取上游原始 JSON，保存为留底文件")
-    print("  2. 直接使用上游内容作为发布文件（不做过滤、不做测速）")
-    print("  3. spider.jar 下载到仓库，改写成 GitHub Raw 地址 + MD5")
+    print("  2. 按名称清洗、去重，并修正配套文件地址")
+    print("  3. 两套配置分别保存播放工具，检查工具与站点是否匹配")
     print("  4. spider 多源兜底，失败时自动切换")
     print("  5. mirrors.json 提供多 CDN 出口")
     print()
     return 0
 
 
-def check_url_health(url: str, timeout: int, network: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def check_url_health(url: str, timeout: int, network: Optional[Dict[str, Any]],
+                     kind: Optional[str] = None, expected_md5: Optional[str] = None,
+                     expected_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    timeout = clamp_timeout(timeout)
     errors = []
     for mode, proxy_url in build_fetch_attempts(network):
-        cmd = [
-            "curl", "-fsSL",
-            "-A", "eggtv-healthcheck/1.0",
-            "--connect-timeout", str(min(timeout, 20)),
-            "--max-time", str(timeout),
-            "-o", "/dev/null",
-            "-w", "%{http_code}\t%{time_starttransfer}\t%{time_total}",
-        ]
-        if proxy_url:
-            cmd.extend(["--proxy", proxy_url])
-        cmd.append(url)
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        if result.returncode == 0:
-            parts = result.stdout.strip().split("\t")
-            if len(parts) >= 3:
-                http_code, ttfb, total = parts
-                return {
-                    "url": url,
-                    "http_code": int(http_code),
-                    "time_starttransfer_ms": float(ttfb) * 1000.0,
-                    "time_total_ms": float(total) * 1000.0,
-                    "reachable": True,
-                }
-        errors.append(f"{mode}: {result.stderr.strip() or 'curl failed'}")
-    return {
-        "url": url,
-        "reachable": False,
-        "error": " | ".join(errors),
-    }
+        with tempfile.TemporaryDirectory(prefix="eggtv-health-") as health_dir:
+            body_path = Path(health_dir) / "response"
+            result = _check_url_attempt(url, timeout, proxy_url, body_path)
+            if result.returncode == 0:
+                parts = result.stdout.strip().split("\t")
+                try:
+                    if len(parts) != 3 or not 200 <= int(parts[0]) < 300:
+                        raise SyncError("未返回有效内容")
+                    body = body_path.read_bytes()
+                    if not body:
+                        raise SyncError("返回了空文件")
+                    if kind in {"config", "upstream"}:
+                        payload = json.loads(body.decode("utf-8-sig"))
+                        validate_source_payload(payload)
+                        if expected_payload is not None and payload != expected_payload:
+                            raise SyncError("镜像尚未更新到当前版本")
+                        if kind == "upstream":
+                            tool_url = resolve_relative_reference(url, strip_spider_suffix(payload["spider"]))
+                            tool_result = check_url_health(tool_url, timeout, network, kind="jar", expected_payload=payload)
+                            if not tool_result["reachable"]:
+                                raise SyncError("上游播放工具不可用: " + tool_result["error"])
+                    if kind == "jar":
+                        if not is_valid_jar_bytes(body):
+                            raise SyncError("返回的内容不是有效播放工具")
+                        if expected_md5 and hashlib.md5(body).hexdigest() != expected_md5:
+                            raise SyncError("播放工具与菜单校验值不一致")
+                        if expected_payload is not None and not jar_supports_sites(body, expected_payload):
+                            raise SyncError("播放工具与站点不匹配")
+                    if kind == "resource" and body.lstrip().lower().startswith((b"<!doctype html", b"<html")):
+                        raise SyncError("配套文件地址返回了网页")
+                    return {"url": url, "http_code": int(parts[0]), "reachable": True,
+                            "time_starttransfer_ms": float(parts[1]) * 1000,
+                            "time_total_ms": float(parts[2]) * 1000}
+                except (SyncError, ValueError, UnicodeError, OSError) as exc:
+                    errors.append(f"{mode}: {exc}")
+                    continue
+            errors.append(f"{mode}: {result.stderr.strip() or 'curl failed'}")
+    return {"url": url, "reachable": False, "error": " | ".join(errors)}
+
+
+def _check_url_attempt(url: str, timeout: int, proxy_url: Optional[str],
+                       body_path: Path) -> subprocess.CompletedProcess:
+    cmd = [
+        "curl", "-fsSL",
+        "-A", "eggtv-healthcheck/1.0",
+        "--connect-timeout", str(min(timeout, 20)),
+        "--max-time", str(timeout),
+        "-o", str(body_path),
+        "-w", "%{http_code}\t%{time_starttransfer}\t%{time_total}",
+    ]
+    if proxy_url:
+        cmd.extend(["--proxy", proxy_url])
+    cmd.append(url)
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=timeout + 5)
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="检查超时")
+    except OSError as exc:
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr=str(exc))
 
 
 def cmd_health(args: argparse.Namespace) -> int:
@@ -684,7 +879,7 @@ def cmd_health(args: argparse.Namespace) -> int:
             print(f"[{name}] 上游: (未配置)")
             continue
 
-        result = check_url_health(upstream_url, timeout, network)
+        result = check_url_health(upstream_url, timeout, network, kind="upstream")
         if result["reachable"]:
             print(f"[{name}] 上游: OK -> HTTP {result['http_code']}, {result['time_starttransfer_ms']:.0f}ms")
         else:
@@ -692,7 +887,7 @@ def cmd_health(args: argparse.Namespace) -> int:
             all_ok = False
 
         for fallback in profile.get("upstream_fallback_urls", []):
-            fb_result = check_url_health(fallback, timeout, network)
+            fb_result = check_url_health(fallback, timeout, network, kind="upstream")
             if fb_result["reachable"]:
                 print(f"  └─ 候补: OK ({fb_result['time_starttransfer_ms']:.0f}ms)")
             else:
@@ -702,14 +897,14 @@ def cmd_health(args: argparse.Namespace) -> int:
 
     # Check spider JAR
     print("--- Spider JAR ---")
-    spider_file = repo_root / "jar" / "spider.jar"
-    if spider_file.exists():
-        digest = md5_file(spider_file)
-        size_kb = spider_file.stat().st_size // 1024
-        print(f"spider.jar: OK ({size_kb} KB, md5: {digest[:12]}...)")
-    else:
-        print(f"spider.jar: 缺失!")
-        all_ok = False
+    for name, profile in config["profiles"].items():
+        spider = profile.get("spider", {})
+        spider_file = ensure_relative_to_repo(repo_root, spider.get("download_to", "jar/spider.jar"))
+        if spider_file.exists() and is_valid_jar_bytes(spider_file.read_bytes()):
+            print(f"[{name}] {spider_file.name}: 文件有效")
+        else:
+            print(f"[{name}] {spider_file.name}: 缺失或损坏")
+            all_ok = False
 
     print()
 
@@ -719,7 +914,14 @@ def cmd_health(args: argparse.Namespace) -> int:
         cdns = mirrors_config.get("cdns", [])
         print("--- CDN 镜像 ---")
         for cdn in cdns:
-            print(f"CDN: {cdn}")
+            for name, profile in config["profiles"].items():
+                url = cdn.rstrip("/") + "/" + profile["publish_output"]
+                local_file = repo_root / profile["publish_output"]
+                expected = load_json(local_file) if local_file.exists() else None
+                result = check_url_health(url, timeout, network, kind="config", expected_payload=expected)
+                print(f"[{name}] 镜像: {'OK' if result['reachable'] else 'FAIL'} -> {url}")
+                if not result["reachable"]:
+                    all_ok = False
         print()
 
     # Check publish files
@@ -731,6 +933,25 @@ def cmd_health(args: argparse.Namespace) -> int:
             size_kb = publish_path.stat().st_size // 1024
             try:
                 payload = load_json(publish_path)
+                validate_source_payload(payload)
+                spider = profile.get("spider", {})
+                jar_file = ensure_relative_to_repo(repo_root, spider.get("download_to", "jar/spider.jar"))
+                if not jar_file.exists() or not jar_supports_sites(jar_file.read_bytes(), payload):
+                    raise SyncError("播放工具与站点不匹配")
+                parts = payload["spider"].split(";md5;", 1)
+                if len(parts) != 2 or parts[1] != md5_file(jar_file):
+                    raise SyncError("播放工具校验值不一致")
+                tool_result = check_url_health(parts[0], timeout, network, kind="jar", expected_md5=parts[1])
+                if not tool_result["reachable"]:
+                    raise SyncError("已发布的播放工具不可用: " + tool_result["error"])
+                dependencies = resource_urls(payload)
+                with ThreadPoolExecutor(max_workers=6) as executor:
+                    dependency_results = list(executor.map(
+                        lambda url: check_url_health(url, timeout, network, kind="resource"), dependencies))
+                for dependency in dependency_results:
+                    if not dependency["reachable"]:
+                        print(f"  配套文件 FAIL: {dependency['url']}")
+                        all_ok = False
                 sites_count = len(payload.get("sites", [])) if isinstance(payload, dict) else 0
                 print(f"[{name}] {publish_path.name}: OK ({size_kb} KB, {sites_count} sites)")
             except Exception as e:
@@ -741,8 +962,9 @@ def cmd_health(args: argparse.Namespace) -> int:
             all_ok = False
 
     print()
+    print("检查范围: 配置、镜像、配套文件与播放工具；实际搜索及播放需在电视上试播。")
     if all_ok:
-        print("状态: 全部正常")
+        print("状态: 上述文件检查通过，尚未验证实际播放")
         return 0
     else:
         print("状态: 存在问题，请检查上述 FAIL 项")
@@ -776,6 +998,9 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
             "renamed": r.get("renamed"),
             "changed_files": [str(p.relative_to(repo_root)) for p in r.get("changed_files", [])]
         })
+        report["profiles"][-1].update({"status": r.get("status", "updated"),
+                                      "using_fallback": r.get("using_fallback", False),
+                                      "error": r.get("error")})
 
     # 生成 Markdown 报告
     md_lines = []
@@ -795,6 +1020,10 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
         md_lines.append(f"## 📺 {profile.upper()} 配置")
         md_lines.append("")
         md_lines.append(f"- **来源**: {r['source']}")
+        if r.get("error"):
+            md_lines.append(f"- **状态**: 更新失败，保留原配置。原因: {r['error']}")
+        elif r.get("using_fallback"):
+            md_lines.append("- **状态**: 首选来源不完整，已使用整套候补来源")
         md_lines.append(f"- **保留站点**: {kept} 个 ✅")
         md_lines.append(f"- **移除站点**: {removed} 个 🗑️")
 
@@ -822,6 +1051,7 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
     report_path = repo_root / "sync_report.md"
     report_path.write_text("\n".join(md_lines), encoding="utf-8")
     print(f"[report] 报告已生成: sync_report.md")
+    save_json(repo_root / "sync_report.json", report)
     return report_path
 
 
@@ -836,19 +1066,22 @@ def cmd_sync(args: argparse.Namespace) -> int:
     sync_results = []
     dry_run = getattr(args, "dry_run", False)
     show_diff = getattr(args, "diff", False)
+    failed_profiles = []
 
     for name in target_profiles:
         upstream_override = args.upstream_url if len(target_profiles) == 1 else None
         profile_config = config["profiles"].get(name, {})
-        result = sync_profile(
-            repo_root,
-            repo_config,
-            name,
-            profile_config,
-            upstream_override=upstream_override,
-            network=network,
-            dry_run=dry_run,
-        )
+        try:
+            result = sync_profile(
+                repo_root, repo_config, name, profile_config,
+                upstream_override=upstream_override, network=network, dry_run=dry_run,
+            )
+        except SyncError as exc:
+            failed_profiles.append(name)
+            print(f"[{name}] 更新失败，保留原配置: {exc}")
+            sync_results.append({"profile": name, "source": profile_config.get("upstream_url", ""),
+                                 "status": "kept_previous", "error": str(exc), "changed_files": []})
+            continue
         changed_files.extend(result["changed_files"])
         sync_results.append(result)
         changed_summary = ", ".join(str(p.relative_to(repo_root)) for p in result["changed_files"]) or "no file changes"
@@ -868,7 +1101,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
     if dry_run:
         print("[dry-run] no files were written")
-        return 0
+        return 1 if failed_profiles else 0
 
     # 生成同步报告
     report_path = generate_sync_report(sync_results, repo_root)
@@ -876,6 +1109,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
     if args.push:
         unique_files = sorted(set(changed_files), key=lambda p: str(p))
         unique_files.append(report_path)  # 报告也提交
+        unique_files.append(repo_root / "sync_report.json")
         commit_message = args.commit_message or f"chore(sync): refresh {'/'.join(target_profiles)}"
         git_commit_and_push(repo_root, unique_files, commit_message)
         print("git push completed")
@@ -922,11 +1156,13 @@ def cmd_sync(args: argparse.Namespace) -> int:
     print(f"  📁 报告文件: sync_report.md")
     print()
     print("╔══════════════════════════════════════════════════════════╗")
-    print("║                    🎉 同步完成                          ║")
+    print("║                    同步处理完成                        ║")
     print("╚══════════════════════════════════════════════════════════╝")
     print()
 
-    return 0
+    if failed_profiles:
+        print("部分来源更新失败，原配置已保留: " + ", ".join(failed_profiles))
+    return 1 if len(failed_profiles) == len(target_profiles) else 0
 
 
 def _show_file_diff(repo_root: Path, file_path: Path) -> None:
@@ -942,7 +1178,10 @@ def _show_file_diff(repo_root: Path, file_path: Path) -> None:
 def git_commit_and_push(repo_root: Path, files: List[Path], commit_message: str) -> None:
     if not files:
         return
-    relative_files = [str(p.relative_to(repo_root)) for p in files]
+    relative_files = [str(p.relative_to(repo_root)) for p in files
+                      if run_git(repo_root, ["check-ignore", "-q", "--", str(p.relative_to(repo_root))]).returncode != 0]
+    if not relative_files:
+        return
     add_result = run_git(repo_root, ["add", *relative_files])
     if add_result.returncode != 0:
         raise SyncError(add_result.stderr.strip() or "git add failed")
@@ -1000,6 +1239,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    # Windows 终端也应能显示站点名中的中文和符号。
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

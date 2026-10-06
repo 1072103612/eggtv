@@ -26,12 +26,10 @@
       "upstream_output": "tvbox_upstream.json",
       "publish_output": "tvbox_config.json",
       "spider": {
-        "download_to": "jar/spider.jar",
-        "publish_path": "jar/spider.jar",
+        "download_to": "jar/tvbox_spider.jar",
+        "publish_path": "jar/tvbox_spider.jar",
         "timeout": 120,
-        "fallback_sources": [
-          "https://cdn.jsdelivr.net/gh/qist/tvbox@master/spider.jar"
-        ]
+        "fallback_sources": []
       },
       "filter": {
         "block_keywords": [
@@ -54,10 +52,42 @@
           "歌曲",
           "美食",
           "演唱",
-          "推送"
+          "推送",
+          "云盘",
+          "网盘",
+          "音乐",
+          "小说",
+          "听书",
+          "FM",
+          "广播",
+          "球",
+          "体育",
+          "搜索",
+          "聚搜",
+          "聚合",
+          "直播",
+          "DJ",
+          "本地",
+          "课堂",
+          "教学",
+          "知识",
+          "急救",
+          "小学",
+          "初中",
+          "高中",
+          "應用商店",
+          "请勿相信视频中任何广告",
+          "新片"
+        ],
+        "drop_fields": [
+          "lives"
         ]
       },
-      "rename_first": "🎬欢迎来到蛋壳24h自助影院"
+      "rename_first": "🎬欢迎来到蛋壳24h自助影院",
+      "upstream_fallback_urls": [
+        "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
+        "https://cdn.jsdelivr.net/gh/qist/tvbox@master/jsm.json"
+      ]
     },
     "jsm": {
       "description": "副配置",
@@ -69,8 +99,8 @@
       "upstream_output": "jsm_upstream.json",
       "publish_output": "jsm_backup.json",
       "spider": {
-        "download_to": "jar/spider.jar",
-        "publish_path": "jar/spider.jar",
+        "download_to": "jar/jsm_spider.jar",
+        "publish_path": "jar/jsm_spider.jar",
         "timeout": 120,
         "fallback_sources": [
           "https://cdn.jsdelivr.net/gh/qist/tvbox@master/spider.jar"
@@ -114,7 +144,20 @@
           "聚合",
           "推送",
           "配置接口完全免费",
-          "请勿相信视频中任何广告"
+          "请勿相信视频中任何广告",
+          "儿童",
+          "云盘",
+          "网盘",
+          "小说",
+          "FM",
+          "广播",
+          "聚搜",
+          "小学",
+          "初中",
+          "高中"
+        ],
+        "drop_fields": [
+          "lives"
         ]
       }
     }

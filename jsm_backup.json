@@ -1,37 +1,5 @@
 {
-  "spider": "https://1072103612.github.io/eggtv/jar/spider.jar;md5;c1ed419a642c4475b3fe04898461e663",
-  "lives": [
-    {
-      "name": "migu",
-      "type": 0,
-      "url": "https://develop202.github.io/migu_video/interface.txt",
-      "playerType": 1,
-      "ua": "okhttp/3.8.1",
-      "timeout": 20,
-      "epg": "https://epg.cdn.loc.cc/?ch={name}&date={date}",
-      "logo": "https://logo.wyfc.qzz.io/{name}.png"
-    },
-    {
-      "name": "live",
-      "type": 0,
-      "url": "https://epg.pw/test_channels.m3u",
-      "playerType": 1,
-      "ua": "okhttp/3.8.1",
-      "timeout": 20,
-      "epg": "https://epg.cdn.loc.cc/?ch={name}&date={date}",
-      "logo": "https://logo.wyfc.qzz.io/{name}.png"
-    },
-    {
-      "name": "ipv6",
-      "type": 0,
-      "url": "./tvboxtv.txt",
-      "playerType": 1,
-      "ua": "okhttp/3.8.1",
-      "timeout": 20,
-      "epg": "https://epg.cdn.loc.cc/?ch={name}&date={date}",
-      "logo": "https://logo.wyfc.qzz.io/{name}.png"
-    }
-  ],
+  "spider": "https://1072103612.github.io/eggtv/jar/jsm_spider.jar;md5;c1ed419a642c4475b3fe04898461e663",
   "wallpaper": "https://wallpaper-1tg.pages.dev/",
   "danmaku": "http://127.0.0.1:9978/proxy?do=danmaku&name={name}&episode={episode}",
   "sites": [
@@ -39,8 +7,8 @@
       "key": "新闪雷",
       "name": "新闪雷 • MP4",
       "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./js/新闪雷.js",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
+      "ext": "https://raw.githubusercontent.com/qist/tvbox/master/js/新闪雷.js",
       "header": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
       }
@@ -66,8 +34,8 @@
       "key": "cupfox_in",
       "name": "茶杯狐 • cupfox.in",
       "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./js/茶杯狐.js",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
+      "ext": "https://raw.githubusercontent.com/qist/tvbox/master/js/茶杯狐.js",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 0,
@@ -80,7 +48,7 @@
       "key": "italkbbtv",
       "name": "ITalkBB • 外",
       "type": 3,
-      "api": "./py/ITalkBBTV.py",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/py/ITalkBBTV.py",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 0,
@@ -90,7 +58,7 @@
       "key": "OleLive",
       "name": "欧乐影院 • 外",
       "type": 3,
-      "api": "./py/OleLive.py",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 1,
@@ -100,7 +68,7 @@
       "key": "华数",
       "name": "华数 • 影视",
       "type": 3,
-      "api": "./py/华数.py",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/py/华数.py",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 1,
@@ -110,7 +78,7 @@
       "key": "华谊影视",
       "name": "华谊 • 影视",
       "type": 3,
-      "api": "./py/华谊影视.py",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/py/华谊影视.py",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 1,
@@ -120,7 +88,7 @@
       "key": "Didahd",
       "name": "嘀嗒影视",
       "type": 3,
-      "api": "./py/Didahd.py",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/py/Didahd.py",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 0,
@@ -130,7 +98,7 @@
       "key": "TVB云播",
       "name": "TVB云播",
       "type": 3,
-      "api": "./py/TVB云播.py",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/py/TVB云播.py",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 0,
@@ -505,148 +473,6 @@
       "ext": "https://xunlei8.me"
     },
     {
-      "key": "阿里云盘",
-      "name": "阿里 • 云盘",
-      "type": 3,
-      "api": "csp_PanAli",
-      "searchable": 0,
-      "filterable": 0,
-      "changeable": 0,
-      "style": {
-        "type": "list",
-        "ratio": 1.433
-      }
-    },
-    {
-      "key": "夸克网盘",
-      "name": "夸克 • 网盘",
-      "type": 3,
-      "api": "csp_PanQuark",
-      "searchable": 0,
-      "filterable": 0,
-      "changeable": 0,
-      "style": {
-        "type": "list",
-        "ratio": 1.433
-      }
-    },
-    {
-      "key": "UC网盘",
-      "name": "UC • 网盘",
-      "type": 3,
-      "api": "csp_PanUC",
-      "searchable": 0,
-      "filterable": 0,
-      "changeable": 0,
-      "style": {
-        "type": "list",
-        "ratio": 1.433
-      }
-    },
-    {
-      "key": "迅雷云盘",
-      "name": "迅雷 • 云盘",
-      "type": 3,
-      "api": "csp_PanXunlei",
-      "searchable": 0,
-      "filterable": 0,
-      "changeable": 0,
-      "style": {
-        "type": "list",
-        "ratio": 1.433
-      }
-    },
-    {
-      "key": "光鸭云盘",
-      "name": "光鸭 • 云盘",
-      "type": 3,
-      "api": "csp_PanGuangya",
-      "searchable": 0,
-      "filterable": 0,
-      "changeable": 0,
-      "style": {
-        "type": "list",
-        "ratio": 1.433
-      }
-    },
-    {
-      "key": "天翼云盘",
-      "name": "天翼 • 云盘",
-      "type": 3,
-      "api": "csp_PanTianyi",
-      "searchable": 0,
-      "filterable": 0,
-      "changeable": 0,
-      "style": {
-        "type": "list",
-        "ratio": 1.433
-      }
-    },
-    {
-      "key": "123云盘",
-      "name": "123 • 云盘",
-      "type": 3,
-      "api": "csp_Pan123",
-      "searchable": 0,
-      "filterable": 0,
-      "changeable": 0,
-      "style": {
-        "type": "list",
-        "ratio": 1.433
-      }
-    },
-    {
-      "key": "蜻蜓FM",
-      "name": "蜻蜓 • FM",
-      "type": 3,
-      "api": "csp_QingtingFM",
-      "searchable": 0,
-      "quickSearch": 0,
-      "changeable": 0,
-      "style": {
-        "type": "list"
-      }
-    },
-    {
-      "key": "童趣",
-      "name": "童趣 • 儿童",
-      "type": 3,
-      "api": "csp_TongQu",
-      "searchable": 1,
-      "quickSearch": 0,
-      "changeable": 0,
-      "style": {
-        "type": "rect",
-        "ratio": 1.618
-      }
-    },
-    {
-      "key": "兔小贝",
-      "name": "兔小贝 • 儿童",
-      "type": 3,
-      "api": "csp_TuXiaoBei",
-      "searchable": 1,
-      "quickSearch": 0,
-      "changeable": 0,
-      "style": {
-        "type": "rect",
-        "ratio": 1.618
-      }
-    },
-    {
-      "key": "贝乐虎",
-      "name": "贝乐虎 • 儿童",
-      "type": 3,
-      "api": "csp_BeiLeHu",
-      "searchable": 1,
-      "quickSearch": 0,
-      "changeable": 0,
-      "style": {
-        "type": "rect",
-        "ratio": 1.618
-      }
-    },
-    {
       "key": "电影天堂",
       "name": "影视 • 电影天堂",
       "type": 1,
@@ -980,7 +806,7 @@
       "key": "Ncat",
       "name": "网飞猫",
       "type": 3,
-      "api": "./py/Ncat.py",
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/py/Ncat.py",
       "searchable": 1,
       "quickSearch": 1,
       "filterable": 0,
@@ -990,51 +816,43 @@
       "key": "drpy_js_360影视",
       "name": "官源 • 360",
       "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./js/360影视.js"
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
+      "ext": "https://raw.githubusercontent.com/qist/tvbox/master/js/360影视.js"
     },
     {
       "key": "drpy_js_百忙无果",
       "name": "官源 • 芒果",
       "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./js/百忙无果.js"
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
+      "ext": "https://raw.githubusercontent.com/qist/tvbox/master/js/百忙无果.js"
     },
     {
       "key": "drpy_js_腾云驾雾",
       "name": "官源 • 腾讯",
       "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./js/腾云驾雾.js"
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
+      "ext": "https://raw.githubusercontent.com/qist/tvbox/master/js/腾云驾雾.js"
     },
     {
       "key": "drpy_js_奇珍异兽",
       "name": "官源 • 爱奇艺",
       "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./js/奇珍异兽.js"
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
+      "ext": "https://raw.githubusercontent.com/qist/tvbox/master/js/奇珍异兽.js"
     },
     {
       "key": "drpy_js_菜狗",
       "name": "官源 • 搜狗",
       "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./js/菜狗.js"
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
+      "ext": "https://raw.githubusercontent.com/qist/tvbox/master/js/菜狗.js"
     },
     {
       "key": "drpy_js_优酷",
       "name": "官源 • 优酷",
       "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "ext": "./js/优酷.js"
-    },
-    {
-      "key": "drpy_js_蜻蜓FM",
-      "name": "广播 • 蜻蜓FM",
-      "type": 3,
-      "api": "./lib/drpy2.min.js",
-      "changeable": 0,
-      "ext": "./js/蜻蜓FM.js"
+      "api": "https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
+      "ext": "https://raw.githubusercontent.com/qist/tvbox/master/js/优酷.js"
     }
   ],
   "parses": [
