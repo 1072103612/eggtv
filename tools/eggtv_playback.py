@@ -140,57 +140,91 @@ def sample(android, marker, movie, limits):
     begun = time.monotonic()
     android.tap(target)
     timeout = limits["startup_timeout_seconds"]
-    watch = limits["watch_seconds"]
     started = None
     previous_position = None
-    previous_time = None
     samples = []
-    stalled_seconds = 0.0
-    interruption_seconds = 0.0
     identity = False
+    seek_verified = False
+    seek_seconds = None
+    seek_timeout = False
+    tool_error = None
+    duration = None
+    last = {}
+    last_progress = None
     try:
-        # Loading has its own timeout; observation is timed from actual progress.
-        while True:
+        # The first window is fixed at eight seconds, including initial loading.
+        while time.monotonic() - begun < timeout:
             if (LOCAL / "stop.flag").exists():
                 raise DetectionError("用户停止了检测")
-            elapsed = time.monotonic() - begun
-            if started is None and elapsed >= timeout:
-                break
-            if started is not None and elapsed - started >= watch:
-                break
             try:
-                media = android.request("media")
-                entry = {"seconds": round(elapsed, 2), **{k: media.get(k) for k in ("state", "position", "title")}}
+                media = android.request("media", _timeout=max(.05, min(.75, timeout-(time.monotonic()-begun))))
+                elapsed = time.monotonic() - begun
+                entry = {"stage": "startup", "seconds": round(elapsed, 2), **{k: media.get(k) for k in ("state", "position", "title")}}
                 position = media.get("position")
                 same = media.get("title") == movie
                 moving = same and media.get("state") == 3 and isinstance(position, (float, int)) and previous_position is not None and position > previous_position
                 if started is None and moving:
                     started = elapsed
-                if started is not None and previous_time is not None:
-                    if same and (media.get("state") == 6 or (media.get("state") == 3 and position == previous_position)):
-                        stalled_seconds += min(elapsed - previous_time, 2)
-                    elif not same or media.get("state") not in (3, 6):
-                        interruption_seconds += min(elapsed - previous_time, 2)
+                if moving:
+                    last_progress = elapsed
                 if same and isinstance(position, (float, int)):
                     previous_position = position
-                previous_time = elapsed
+                    duration = media.get("duration")
+                    last = media
                 samples.append(entry)
             except Exception as exc:
-                samples.append({"seconds": round(elapsed, 2), "error": type(exc).__name__})
-                previous_time = None
-            time.sleep(1)
+                samples.append({"stage": "startup", "seconds": round(time.monotonic()-begun, 2), "error": type(exc).__name__})
+            time.sleep(min(.25, max(0, timeout-(time.monotonic()-begun))))
         nodes = android.screen()
         source = android.find(nodes, field="site")
         identity = source is not None and source.get("text") == "站源：" + marker
-        observed_duration = max(0, time.monotonic()-begun-started) if started is not None else 0
+        startup_timeout = started is None or started > timeout or last.get("state") in (1, 6)
+        if last.get("state") == 3 and last_progress is not None and timeout-last_progress > 1:
+            startup_timeout = True
+        if not last:
+            tool_error = "未取得这部影片的播放状态，无法区分工具异常和片源缓冲"
+        if not startup_timeout and last.get("state") != 3:
+            tool_error = "播放被暂停或中断，无法归因到片源"
+        if not startup_timeout and not tool_error and identity:
+            if not isinstance(duration, (int, float)) or duration <= 0:
+                tool_error = "无法取得影片时长，不能验证拖到一半"
+            else:
+                seek_begin = android.seek_middle()
+                target_ms = duration / 2
+                tolerance = max(3000, duration * .01)
+                previous_position = None
+                seek_limit = limits["seek_timeout_seconds"]
+                while time.monotonic()-seek_begin <= seek_limit:
+                    if (LOCAL / "stop.flag").exists():
+                        raise DetectionError("用户停止了检测")
+                    try:
+                        media = android.request("media", _timeout=max(.05, min(.75, seek_limit-(time.monotonic()-seek_begin))))
+                        elapsed = time.monotonic()-seek_begin
+                        position = media.get("position")
+                        near = media.get("title") == movie and isinstance(position, (int, float)) and abs(position-target_ms) <= tolerance
+                        seek_verified = seek_verified or near
+                        samples.append({"stage": "seek", "seconds": round(elapsed, 2), **{k: media.get(k) for k in ("state", "position", "title")}})
+                        if near and media.get("state") == 3 and previous_position is not None and position > previous_position and elapsed <= seek_limit:
+                            seek_seconds = round(elapsed, 2)
+                            break
+                        previous_position = position if near else None
+                    except Exception as exc:
+                        samples.append({"stage": "seek", "seconds": round(time.monotonic()-seek_begin, 2), "error": type(exc).__name__})
+                    time.sleep(min(.25, max(0, seek_limit-(time.monotonic()-seek_begin))))
+                seek_timeout = seek_seconds is None and seek_verified
+                if seek_timeout and media.get("state") == 2:
+                    tool_error = "跳转后播放被暂停，无法归因到片源"
+                if not seek_verified:
+                    tool_error = "无法确认进度已跳到影片一半，不能把拖动失败算作片源失败"
     finally:
         android.home()
     return {"movie": movie, "identity_verified": identity,
             "startup_seconds": round(started, 2) if started is not None else None,
-            "startup_timeout": started is None,
-            "observed_play_seconds": round(observed_duration, 2),
-            "tool_error": "播放被暂停、切换或中断，无法归因到片源" if interruption_seconds > 2 else None,
-            "stall_seconds": round(stalled_seconds, 2),
+            "startup_timeout": startup_timeout,
+            "seek_verified": seek_verified,
+            "seek_seconds": seek_seconds,
+            "seek_timeout": seek_timeout,
+            "tool_error": tool_error,
             "read_error_ratio": sum("error" in s for s in samples) / max(1, len(samples)),
             "samples": samples}
 
@@ -261,7 +295,14 @@ def write_report(report):
         details = item.get("error") or f"首轮：{rounds.get(item.get('first_verdict'))}，复测：{rounds.get(item.get('retest_verdict'))}"
         for trial in item.get("trials", []):
             startup = trial.get("startup_seconds")
-            details += f"；{trial.get('movie', '')}：确认起播{startup if startup is not None else '未成功'}秒，停顿约{trial.get('stall_seconds', 0)}秒"
+            seek = trial.get("seek_seconds")
+            details += f"；{trial.get('movie', '')}：开播{startup if startup is not None else '8秒内未成功'}秒，跳到一半后恢复{seek if seek is not None else '未通过'}秒"
+            if trial.get("tool_error"):
+                details += "（" + trial["tool_error"] + "）"
+            elif trial.get("startup_timeout"):
+                details += "（第8秒未正常播放）"
+            elif trial.get("seek_timeout"):
+                details += "（跳转后等待超过10秒）"
         rows.append("<tr><td>" + html.escape(item["name"]) + "</td><td>" + labels.get(item.get("status"), "保持原状态") + "</td><td>" + html.escape(details) + "</td></tr>")
     page = """<!doctype html><html lang=zh-CN><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>
 <title>蛋壳影院播放检测</title><style>body{font:18px system-ui;max-width:1000px;margin:40px auto;padding:16px;background:#f4f6f8;color:#18202a}table{width:100%;border-collapse:collapse;background:white}td,th{padding:14px;text-align:left;border-bottom:1px solid #ddd}h1{font-size:28px}p{line-height:1.7}</style>

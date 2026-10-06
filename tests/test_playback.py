@@ -4,12 +4,12 @@ from tools.playback_policy import signature, verdict, round_verdict, decide, app
 from tests import test_sync as fixtures
 from tools import eggtv_sync as sync
 
-LIMITS = {"films_per_source": 3, "watch_seconds": 30, "slow_start_seconds": 15, "bad_stall_seconds": 5}
+LIMITS = {"films_per_source": 3, "startup_timeout_seconds": 8, "seek_timeout_seconds": 10}
 
 
 def trial(**overrides):
     item = {"identity_verified": True, "read_error_ratio": 0, "startup_seconds": 4,
-            "observed_play_seconds": 30, "stall_seconds": 0}
+            "seek_verified": True, "seek_seconds": 2, "seek_timeout": False}
     item.update(overrides)
     return item
 
@@ -19,11 +19,19 @@ class PlaybackPolicyTests(unittest.TestCase):
         self.assertEqual(verdict(trial(tool_error="timeout"), LIMITS), "unknown")
         self.assertEqual(verdict(trial(identity_verified=False, startup_timeout=True, startup_seconds=None), LIMITS), "unknown")
 
-    def test_short_observation_cannot_pass(self):
-        self.assertEqual(verdict(trial(observed_play_seconds=2), LIMITS), "unknown")
+    def test_failed_seek_cannot_pass_or_count_as_bad_source(self):
+        self.assertEqual(verdict(trial(seek_verified=False, seek_timeout=True), LIMITS), "unknown")
+
+    def test_eight_second_startup_timeout_is_failure(self):
+        self.assertEqual(verdict(trial(startup_timeout=True), LIMITS), "bad")
+
+    def test_seek_ten_second_boundary(self):
+        self.assertEqual(verdict(trial(seek_seconds=10), LIMITS), "good")
+        self.assertEqual(verdict(trial(seek_seconds=10.01), LIMITS), "bad")
+        self.assertEqual(verdict(trial(seek_seconds=None, seek_timeout=True), LIMITS), "bad")
 
     def test_two_bad_films_require_failed_retest(self):
-        first = round_verdict([trial(startup_seconds=25), trial(stall_seconds=8), trial()], LIMITS)
+        first = round_verdict([trial(startup_timeout=True), trial(seek_seconds=12), trial()], LIMITS)
         self.assertEqual(first, "bad")
         self.assertEqual(decide(first, "unknown", "healthy"), "healthy")
         self.assertEqual(decide(first, "bad", "healthy"), "unhealthy")

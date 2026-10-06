@@ -13,14 +13,21 @@ def verdict(trial, limits):
         return "unknown"
     if trial.get("read_error_ratio", 1) > .1:
         return "unknown"
+    if trial.get("startup_timeout"):
+        return "bad"
     startup = trial.get("startup_seconds")
     if startup is None:
-        return "bad" if trial.get("startup_timeout") else "unknown"
-    if startup > limits["slow_start_seconds"]:
-        return "bad"
-    if trial.get("observed_play_seconds", 0) < limits["watch_seconds"] * .85:
         return "unknown"
-    if trial.get("stall_seconds", 0) >= limits["bad_stall_seconds"]:
+    if startup > limits["startup_timeout_seconds"]:
+        return "bad"
+    if not trial.get("seek_verified"):
+        return "unknown"
+    if trial.get("seek_timeout"):
+        return "bad"
+    seek = trial.get("seek_seconds")
+    if seek is None:
+        return "unknown"
+    if seek > limits["seek_timeout_seconds"]:
         return "bad"
     return "good"
 

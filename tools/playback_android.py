@@ -53,11 +53,11 @@ class Android:
         self.port = int(self.call("forward", "tcp:0", "tcp:9978").strip())
         time.sleep(2)
 
-    def request(self, path, **params):
+    def request(self, path, _timeout=4, **params):
         url = f"http://127.0.0.1:{self.port}/{path}"
         if params:
             url += "?" + urllib.parse.urlencode(params)
-        with self.opener.open(url, timeout=4) as response:
+        with self.opener.open(url, timeout=_timeout) as response:
             raw = response.read(1024 * 1024)
         return json.loads(raw) if path == "media" else raw
 
@@ -158,6 +158,30 @@ class Android:
         x = (bounds[0]+bounds[2])//2
         self.call("shell", "input", "swipe", str(x), str(bounds[3]-50), str(x), str(bounds[1]+50), "450")
         time.sleep(.5)
+
+    def seek_middle(self):
+        nodes = self.screen()
+        fullscreen = self.find(nodes, text="立即播放")
+        if fullscreen is not None:
+            self.tap(fullscreen)
+        self.request("action", do="control", type="pause")
+        nodes = self.screen()
+        bar = self.find(nodes, field="exo_progress")
+        if bar is None:
+            video = self.find(nodes, field="video")
+            if video is None:
+                raise DetectionError("找不到播放器")
+            bounds = list(map(int, re.findall(r"\d+", video.get("bounds", ""))))
+            self.call("shell", "input", "tap", str(bounds[0]+(bounds[2]-bounds[0])//3),
+                      str(bounds[1]+(bounds[3]-bounds[1])//3))
+            time.sleep(.4)
+            bar = self.find(self.screen(), field="exo_progress")
+        if bar is None or bar.get("class") != "android.widget.SeekBar":
+            raise DetectionError("无法找到播放进度条；不能判断拖动缓冲")
+        begun = time.monotonic()
+        self.tap(bar)
+        self.request("action", do="control", type="play", _timeout=1)
+        return begun
 
     def close(self):
         if self.port:
