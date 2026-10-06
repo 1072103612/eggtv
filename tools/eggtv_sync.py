@@ -614,10 +614,39 @@ def _sync_profile(
     validate_source_payload(publish_payload)
     validate_relative_resources(fetched_upstream, publish_payload, upstream_source, network)
 
+    # 先验证完整候选，再按影院网络实测结果过滤。
+    health = {}
+    health_file = repo_config.get("playback_health")
+    if health_file:
+        health_path = ensure_relative_to_repo(repo_root, health_file)
+        if health_path.exists():
+            health_payload = load_json(health_path)
+            if not isinstance(health_payload, dict) or health_payload.get("version") != 1:
+                raise SyncError("播放健康记录格式无效，保留旧配置")
+            health = health_payload.get("profiles", {}).get(profile_name, {})
+            if not isinstance(health, dict) or any(not isinstance(entry, dict) for entry in health.values()):
+                raise SyncError("播放健康记录条目无效，保留旧配置")
+    try:
+        from tools.playback_policy import apply_health, is_healthy
+    except ModuleNotFoundError:
+        from playback_policy import apply_health, is_healthy
+    complete_candidates = copy.deepcopy(publish_payload)
+    kept, health_removed = apply_health(publish_payload["sites"], health)
+    if not kept:
+        raise SyncError("实测后没有可保留的片源，保留旧配置")
+    publish_payload["sites"] = kept
+    sync_info["removed_sites"].extend(site["name"] for site in health_removed)
+    sync_info["sites_removed"] += len(health_removed)
+    sync_info["sites_kept"] = len(kept)
+
     # 先过滤再改名，避免欢迎语掩盖原站点类别。
     first_key = profile_config.get("first_site_key")
     if first_key:
         preferred = next((site for site in publish_payload["sites"] if site["key"] == first_key), None)
+        if preferred is None and any(site["key"] == first_key for site in health_removed):
+            preferred = next((site for site in kept if is_healthy(site, health)), None)
+            if preferred is None:
+                raise SyncError("首页源实测异常且没有已验证健康替代源，保留旧配置")
         if preferred is None:
             raise SyncError(f"上游缺少指定首页站点 {first_key}，尝试候补或保留原配置")
         publish_payload["sites"].remove(preferred)
@@ -646,6 +675,12 @@ def _sync_profile(
     )
     if spider_file is not None:
         changed_files.append(spider_file)
+
+    if profile_config.get("candidates_output"):
+        complete_candidates["spider"] = publish_payload.get("spider")
+        candidate_path = ensure_relative_to_repo(repo_root, profile_config["candidates_output"])
+        if save_json(candidate_path, complete_candidates, dry_run=dry_run):
+            changed_files.append(candidate_path)
 
     if save_json(publish_output, publish_payload, dry_run=dry_run):
         changed_files.append(publish_output)
@@ -688,6 +723,8 @@ def stage_profile(repo_root: Path, repo_config: Dict[str, Any], profile_name: st
         if not is_http_url(staged_config["upstream_url"]):
             staged_config["upstream_url"] = str(Path(staged_config["upstream_url"]).resolve())
         seed_paths = [profile_config["publish_output"], profile_config["upstream_output"]]
+        if repo_config.get("playback_health"):
+            seed_paths.append(repo_config["playback_health"])
         if profile_config.get("spider"):
             seed_paths.append(profile_config["spider"]["download_to"])
         for relative_path in seed_paths:

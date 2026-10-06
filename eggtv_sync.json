@@ -3,6 +3,7 @@
   "repo": {
     "github_repo": "1072103612/eggtv",
     "branch": "main",
+    "playback_health": "playback_health.json",
     "raw_base": "https://1072103612.github.io/eggtv",
     "mirrors": {
       "enabled": true,
@@ -25,6 +26,7 @@
       "fetch_timeout": 60,
       "upstream_output": "tvbox_upstream.json",
       "publish_output": "tvbox_config.json",
+      "candidates_output": "playback_candidates_tvbox.json",
       "spider": {
         "download_to": "jar/tvbox_spider.jar",
         "publish_path": "jar/tvbox_spider.jar",
@@ -102,6 +104,7 @@
       "fetch_timeout": 120,
       "upstream_output": "jsm_upstream.json",
       "publish_output": "jsm_backup.json",
+      "candidates_output": "playback_candidates_jsm.json",
       "spider": {
         "download_to": "jar/jsm_spider.jar",
         "publish_path": "jar/jsm_spider.jar",
