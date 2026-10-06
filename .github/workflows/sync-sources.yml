@@ -55,7 +55,7 @@ jobs:
           fi
 
       - name: Measure source response speed
-        run: python3 tools/eggtv_sync.py --no-proxy speedtest --location "GitHub cloud runner"
+        run: python3 tools/eggtv_sync.py --no-proxy speedtest --location "GitHub 云端（仅供参考）"
 
       - name: Commit changes
         run: |

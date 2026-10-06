@@ -95,6 +95,8 @@ def read_http_bytes(source: str, timeout: int = 30, network: Optional[Dict[str, 
         ]
         if proxy_url:
             cmd.extend(["--proxy", proxy_url])
+        else:
+            cmd.extend(["--noproxy", "*"])
         cmd.append(source)
         # curl --retry 2 最多 3 次尝试，加 buffer 防止 subprocess 僵死
         process_timeout = timeout * 3 + 60
@@ -894,6 +896,8 @@ def _check_url_attempt(url: str, timeout: int, proxy_url: Optional[str],
     ]
     if proxy_url:
         cmd.extend(["--proxy", proxy_url])
+    else:
+        cmd.extend(["--noproxy", "*"])
     cmd.append(url)
     try:
         return subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=timeout + 5)

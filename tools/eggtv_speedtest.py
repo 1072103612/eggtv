@@ -2,6 +2,7 @@
 
 import html
 import os
+import re
 import statistics
 import time
 import urllib.parse
@@ -68,9 +69,11 @@ def collect_targets(root, config, profile_names):
                 measured = add(profile_name, site["name"], group, catalog_url(api) if group == "catalog" else api)
             ext = site.get("ext")
             if isinstance(ext, str) and sync.is_http_url(ext):
-                path = urllib.parse.urlparse(ext).path.lower()
-                group = "resource" if path.endswith((".js", ".py", ".json")) else "entry"
-                measured = add(profile_name, site["name"], group, ext) or measured
+                # 部分站点把多个备用域名写在同一个 ext 中，分别测量。
+                for ext_url in re.split(r",(?=https?://)", ext):
+                    path = urllib.parse.urlparse(ext_url).path.lower()
+                    group = "resource" if path.endswith((".js", ".py", ".json")) else "entry"
+                    measured = add(profile_name, site["name"], group, ext_url) or measured
             if not measured:
                 skipped.append({"profile": profile_name, "name": site["name"], "key": site["key"],
                                 "reason": "通过客户端播放工具访问，需要在电视上实测"})
@@ -117,6 +120,7 @@ def recommendations(results, profile_names):
 
 def render_html(report):
     escape = html.escape
+    labels = report.get("profile_labels", {})
     rows = []
     for group in GROUPS:
         for row in sorted((r for r in report["results"] if r["group"] == group), key=ranking_key):
@@ -124,16 +128,16 @@ def render_html(report):
             download = f"{row['median_download_kbps']:.0f} KB/秒" if group == "tool" and row["median_download_kbps"] is not None else "—"
             color = "ok" if row["status"] == "正常" else "warn" if row["status"] == "偶发失败" else "bad"
             failures = list(dict.fromkeys(a.get("error", "检查失败") for a in row["attempts"] if not a["reachable"]))
-            detail = " · ".join(failures)
+            detail = " · ".join(dict.fromkeys(readable_error(error) for error in failures))
             name = " / ".join(row["names"])
             rows.append(f'<tr><td>{escape(GROUPS[group])}</td><td><strong>{escape(name)}</strong>'
-                        f'<div class="small">{escape(" / ".join(row["profiles"]))}</div>'
+                        f'<div class="small">{escape(" / ".join(labels.get(p, p) for p in row["profiles"]))}</div>'
                         f'<a href="{escape(row["url"], quote=True)}" target="_blank" rel="noopener noreferrer">{escape(row["url"])}</a>'
                         f'<div class="small">{escape(detail)}</div></td><td class="{color}">{escape(row["status"])}</td>'
                         f'<td>{response}</td><td>{row["successful_samples"]}/{row["total_samples"]}</td><td>{download}</td></tr>')
-    best = "".join(f'<li>{escape(name)}：<a href="{escape(url, quote=True)}">{escape(url)}</a></li>'
+    best = "".join(f'<li>{escape(labels.get(name, name))}：<a href="{escape(url, quote=True)}">{escape(url)}</a></li>'
                    for name, url in report["recommended_config_urls"].items()) or "<li>此次没有全部测量成功的配置线路，请稍后重测。</li>"
-    skipped = "".join(f'<li>{escape(item["profile"])} · {escape(item["name"])}</li>' for item in report["unmeasured_sites"])
+    skipped = "".join(f'<li>{escape(labels.get(item["profile"], item["profile"]))} · {escape(item["name"])}</li>' for item in report["unmeasured_sites"])
     clock = datetime.fromisoformat(report["measured_at"]).astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M")
     return f'''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -159,6 +163,25 @@ main{{max-width:1250px;margin:32px auto;padding:0 20px}}h1{{margin:0;font-size:3
 <details class="card"><summary>另有 {len(report['unmeasured_sites'])} 个菜单入口需要在电视上实测</summary>
 <p>这些入口没有可直接测量的地址，由电视客户端的播放工具读取；本报告不把它们记为失败。</p><ul>{skipped}</ul></details>
 </main><script>document.getElementById('filter').addEventListener('input',function(){{const q=this.value.toLowerCase();document.querySelectorAll('tbody tr').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(q));}});</script></body></html>'''
+
+
+def readable_error(error):
+    lowered = error.lower()
+    if "不是有效播放工具" in error or "播放工具与站点不匹配" in error:
+        return "来源没有提供可用的配套播放工具"
+    if "影片列表" in error:
+        return "地址没有返回可用的影片列表"
+    if "404" in error:
+        return "地址不存在"
+    if "403" in error:
+        return "对方拒绝访问，请在影院网络复测"
+    if "timed out" in lowered or "timeout" in lowered or "超时" in error or "522" in error:
+        return "等待超时，请稍后重测"
+    if "resolve host" in lowered:
+        return "域名暂时无法访问"
+    if "ssl" in lowered or "handshake" in lowered:
+        return "连接建立失败，请稍后重测"
+    return "此次无法读取，请稍后重测或在影院网络复测"
 
 
 def run_speedtest(args):
@@ -191,6 +214,7 @@ def run_speedtest(args):
             print(f"[{len(results)}/{len(targets)}] {row['status']} · {ms} · {row['names'][0]}", flush=True)
     results.sort(key=lambda row: (list(GROUPS).index(row["group"]), ranking_key(row)))
     report = {"version": 1, "measured_at": datetime.now(timezone.utc).isoformat(), "location": location,
+              "profile_labels": {name: config["profiles"][name].get("description", name) for name in names},
               "samples": samples, "timeout_seconds": timeout, "elapsed_seconds": round(time.monotonic() - started, 1),
               "network_note": "此次使用代理优先或回退模式。" if network.get("proxy_url") and network.get("proxy_mode") != "off" else "此次按直连模式测量。",
               "scope": "HTTP response and supporting-file download; actual playback is untested",

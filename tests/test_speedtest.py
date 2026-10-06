@@ -52,6 +52,14 @@ class SpeedTests(unittest.TestCase):
         self.assertEqual(result["median_response_ms"], 200)
         self.assertEqual(result["status"], "正常")
 
+    def test_multiple_alternative_domains_are_measured_separately(self):
+        self.payload["sites"][2]["ext"] = "https://one.test,https://two.test,https://one.test"
+        sync.save_json(self.root / "config.json", self.payload)
+        targets, skipped = speed.collect_targets(self.root, self.config, ["main"])
+        entries = [target["url"] for target in targets if target["group"] == "entry"]
+        self.assertEqual(entries, ["https://one.test", "https://two.test"])
+        self.assertNotIn("c", [item["key"] for item in skipped])
+
     def test_failures_are_recorded_and_partial_is_not_full_success(self):
         failed = {"reachable": False, "error": "timeout"}
         with patch.object(sync, "check_url_health", side_effect=[failed, self.response(200)]):
