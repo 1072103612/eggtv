@@ -81,13 +81,17 @@
         ],
         "drop_fields": [
           "lives"
+        ],
+        "block_keys": [
+          "新闪雷"
         ]
       },
-      "rename_first": "🎬欢迎来到蛋壳24h自助影院",
+      "rename_first": "欢迎来到蛋壳影院",
       "upstream_fallback_urls": [
         "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
         "https://cdn.jsdelivr.net/gh/qist/tvbox@master/jsm.json"
-      ]
+      ],
+      "first_site_key": "OleLive"
     },
     "jsm": {
       "description": "副配置",
@@ -161,5 +165,10 @@
         ]
       }
     }
+  },
+  "speedtest": {
+    "samples": 2,
+    "timeout": 8,
+    "workers": 6
   }
 }

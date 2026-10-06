@@ -14,6 +14,7 @@ import sys
 import tempfile
 import urllib.parse
 import zipfile
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -233,15 +234,16 @@ def deduplicate_sites(sites: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]]
     return kept, removed
 
 
-def filter_sites(sites: List[Dict[str, Any]], block_keywords: List[str]) -> Tuple[List[Dict[str, Any]], List[str]]:
+def filter_sites(sites: List[Dict[str, Any]], block_keywords: List[str],
+                 block_keys: Optional[List[str]] = None) -> Tuple[List[Dict[str, Any]], List[str]]:
     """按站点名字过滤，命中关键字则删除，返回 (保留下来的, 被移除的)"""
-    if not block_keywords:
+    if not block_keywords and not block_keys:
         return sites, []
     kept = []
     removed = []
     for site in sites:
         name = site.get("name", "")
-        blocked = any(kw.casefold() in name.casefold() for kw in block_keywords)
+        blocked = site.get("key") in (block_keys or []) or any(kw.casefold() in name.casefold() for kw in block_keywords)
         if blocked:
             removed.append(name)
             continue
@@ -591,7 +593,9 @@ def _sync_profile(
     block_keywords = profile_config.get("filter", {}).get("block_keywords", [])
     if "sites" in publish_payload and isinstance(publish_payload["sites"], list):
         original_count = len(publish_payload["sites"])
-        publish_payload["sites"], removed_names = filter_sites(publish_payload["sites"], block_keywords)
+        publish_payload["sites"], removed_names = filter_sites(
+            publish_payload["sites"], block_keywords,
+            profile_config.get("filter", {}).get("block_keys", []))
         publish_payload["sites"], duplicate_names = deduplicate_sites(publish_payload["sites"])
         removed_names.extend(duplicate_names)
         removed_count = original_count - len(publish_payload["sites"])
@@ -609,6 +613,13 @@ def _sync_profile(
     validate_relative_resources(fetched_upstream, publish_payload, upstream_source, network)
 
     # 先过滤再改名，避免欢迎语掩盖原站点类别。
+    first_key = profile_config.get("first_site_key")
+    if first_key:
+        preferred = next((site for site in publish_payload["sites"] if site["key"] == first_key), None)
+        if preferred is None:
+            raise SyncError(f"上游缺少指定首页站点 {first_key}，尝试候补或保留原配置")
+        publish_payload["sites"].remove(preferred)
+        publish_payload["sites"].insert(0, preferred)
     rename_first = profile_config.get("rename_first")
     if rename_first:
         old_name = publish_payload["sites"][0]["name"]
@@ -824,16 +835,51 @@ def check_url_health(url: str, timeout: int, network: Optional[Dict[str, Any]],
                             raise SyncError("播放工具与菜单校验值不一致")
                         if expected_payload is not None and not jar_supports_sites(body, expected_payload):
                             raise SyncError("播放工具与站点不匹配")
-                    if kind == "resource" and body.lstrip().lower().startswith((b"<!doctype html", b"<html")):
+                    if kind == "resource" and body[:1024].decode("utf-8-sig", errors="replace").lstrip().lower().startswith(("<!doctype html", "<html")):
                         raise SyncError("配套文件地址返回了网页")
+                    if kind == "catalog":
+                        validate_catalog(body)
                     return {"url": url, "http_code": int(parts[0]), "reachable": True,
                             "time_starttransfer_ms": float(parts[1]) * 1000,
-                            "time_total_ms": float(parts[2]) * 1000}
+                            "time_total_ms": float(parts[2]) * 1000,
+                            "download_bytes": len(body), "connection_mode": mode,
+                            "download_kbps": len(body) / max(float(parts[2]), 0.001) / 1024}
                 except (SyncError, ValueError, UnicodeError, OSError) as exc:
                     errors.append(f"{mode}: {exc}")
                     continue
             errors.append(f"{mode}: {result.stderr.strip() or 'curl failed'}")
     return {"url": url, "reachable": False, "error": " | ".join(errors)}
+
+
+def validate_catalog(body: bytes) -> None:
+    """Accept actual JSON/XML catalog responses, rather than HTTP-200 error pages."""
+    text = body.decode("utf-8-sig").strip()
+    if text.startswith(("{", "[")):
+        payload = json.loads(text)
+        if isinstance(payload, list) and all(isinstance(item, dict) for item in payload):
+            return
+        if isinstance(payload, dict):
+            data = payload.get("data", payload)
+            if isinstance(data, dict) and isinstance(data.get("list"), list):
+                return
+            if isinstance(data, list):
+                return
+        raise SyncError("接口没有返回影片列表")
+    try:
+        root = ET.fromstring(text)
+        if root.tag in {"rss", "list"} and (root.tag == "list" or root.find("list") is not None):
+            return
+    except ET.ParseError:
+        pass
+    raise SyncError("接口返回的内容不是影片列表")
+
+
+def cmd_speedtest(args: argparse.Namespace) -> int:
+    if __package__:
+        from .eggtv_speedtest import run_speedtest
+    else:
+        from eggtv_speedtest import run_speedtest
+    return run_speedtest(args)
 
 
 def _check_url_attempt(url: str, timeout: int, proxy_url: Optional[str],
@@ -1224,6 +1270,14 @@ def build_parser() -> argparse.ArgumentParser:
     health_parser = subparsers.add_parser("health", help="check health")
     health_parser.add_argument("--timeout", type=int, default=15)
     health_parser.set_defaults(func=cmd_health)
+
+    speed_parser = subparsers.add_parser("speedtest", help="measure source and mirror response speed")
+    speed_parser.add_argument("profiles", nargs="*", help="profile names (default: all)")
+    speed_parser.add_argument("--samples", type=int, help="requests per target, 1 to 5")
+    speed_parser.add_argument("--timeout", type=int, help="seconds per request, 5 to 30")
+    speed_parser.add_argument("--workers", type=int, help="concurrent targets, 1 to 8")
+    speed_parser.add_argument("--location", help="description of the network used")
+    speed_parser.set_defaults(func=cmd_speedtest)
 
     sync_parser = subparsers.add_parser("sync", help="sync sources")
     sync_parser.add_argument("profiles", nargs="*", help="profile names")

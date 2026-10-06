@@ -98,6 +98,23 @@ class SyncTests(unittest.TestCase):
         self.assertEqual([s["name"] for s in kept], ["影院"])
         self.assertEqual(len(removed), 3)
 
+    def test_removed_site_stays_removed_and_selected_site_stays_first(self):
+        original = payload()
+        original["sites"] = [{"key": "slow", "name": "旧欢迎入口", "api": "csp_Demo"},
+                             {"key": "other", "name": "其他影院", "api": "csp_Demo"},
+                             {"key": "OleLive", "name": "欧乐影院", "api": "csp_Demo"}]
+        self.responses["/source/config.json"] = json.dumps(original).encode()
+        self.profile["filter"]["block_keys"] = ["slow"]
+        self.profile["first_site_key"] = "OleLive"
+        self.profile["rename_first"] = "欢迎来到蛋壳影院"
+        self.run_sync()
+        sites = sync.load_json(self.root / "config.json")["sites"]
+        self.assertEqual(sites[0]["key"], "OleLive")
+        self.assertEqual(sites[0]["name"], "欢迎来到蛋壳影院")
+        self.assertNotIn("slow", [site["key"] for site in sites])
+        self.run_sync()
+        self.assertEqual(sync.load_json(self.root / "config.json")["sites"], sites)
+
     def test_jar_must_be_complete_and_match_sites(self):
         self.assertFalse(sync.is_valid_jar_bytes(b"PK\x03\x04broken"))
         self.assertFalse(sync.is_valid_jar_bytes(b"<html>success</html>"))
@@ -222,6 +239,22 @@ class SyncTests(unittest.TestCase):
         self.responses["/source/jar/tool.jar"] = b"<html>error</html>"
         self.assertFalse(sync.check_url_health(self.base + "/source/config.json", 5,
                          self.network, kind="upstream")["reachable"])
+
+    def test_speed_catalog_validates_actual_list_response(self):
+        self.responses["/catalog"] = b'{"list":[{"vod_name":"movie"}]}'
+        self.assertTrue(sync.check_url_health(self.base + "/catalog", 5,
+                        self.network, kind="catalog")["reachable"])
+        self.responses["/catalog"] = b'{"error":"not authorized"}'
+        self.assertFalse(sync.check_url_health(self.base + "/catalog", 5,
+                         self.network, kind="catalog")["reachable"])
+        self.responses["/catalog"] = b'<rss><list><video><name>movie</name></video></list></rss>'
+        self.assertTrue(sync.check_url_health(self.base + "/catalog", 5,
+                        self.network, kind="catalog")["reachable"])
+
+    def test_speed_resource_rejects_html_with_bom(self):
+        self.responses["/script.js"] = b'\xef\xbb\xbf<!DOCTYPE html><html>error</html>'
+        self.assertFalse(sync.check_url_health(self.base + "/script.js", 5,
+                         self.network, kind="resource")["reachable"])
 
     def test_partial_failure_allows_other_profile_to_update(self):
         args = argparse.Namespace(repo_root=str(self.root), config="sync.json", all=True,

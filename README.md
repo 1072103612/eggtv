@@ -20,6 +20,7 @@
 | `jar/tvbox_spider.jar` | 主配置的播放工具 |
 | `jar/jsm_spider.jar` | 副配置的播放工具 |
 | `sync_report.md` / `sync_report.json` | 同步报告（含候补来源及更新失败原因） |
+| `speed_report.html` / `speed_report.json` | 可直接查看的测速报告和详细数据 |
 | `tvbox_config_local.json` / `jar/spider.jar` | 历史本地配置和工具，不属于自动维护的两套发布配置 |
 
 ## 快速使用
@@ -60,6 +61,26 @@ GitHub Actions 每 6 小时自动同步一次，也可手动触发：
 1. 进入 https://github.com/1072103612/eggtv/actions/workflows/sync-sources.yml
 2. 点击 "Run workflow"
 
+### 查看片源测速
+
+打开 [片源测速报告](https://1072103612.github.io/eggtv/speed_report.html)，可看到哪些地址能读取、响应时间、成功次数，以及此次响应最快的配置线路。每次定时同步后会自动测速并更新报告。
+
+报告分别检查配置线路、上游片源及工具、直接影片列表接口、站点入口和配套脚本。每个地址默认测两次，按成功率及响应时间的中位数排序。播放工具文件还显示下载速度；它不是影片缓冲速度。测速不会自动删除站点或调整电视菜单排序。
+
+**云端报告来自 GitHub 运行机器，仅供参考。** 如需判断影院网络里的体验，可在连接影院网络的电脑运行：
+
+```bash
+python3 tools/eggtv_sync.py --no-proxy speedtest --location "影院网络"
+```
+
+完成后直接打开本地 `speed_report.html`。只测主配置、调整次数及等待时间：
+
+```bash
+python3 tools/eggtv_sync.py --no-proxy speedtest tvbox --samples 3 --timeout 10
+```
+
+有些入口由电视客户端的播放工具访问，没有可直接测量的地址，会单列为“需要在电视上实测”，不会当作测速失败。测速成功不能证明电影能播放。
+
 ## 片源规则
 
 ### 保留的
@@ -77,6 +98,8 @@ GitHub Actions 每 6 小时自动同步一次，也可手动触发：
 - 搜索、网盘类
 
 规则在 `eggtv_sync.json` 中配置，可随时修改。过滤依据是站点名称，不判断影片实际内容；重复站点标识只保留第一项。儿童、网盘、音乐、体育等关键词对两套配置都生效，直播列表也不发布。
+
+主配置已停用原来的“新闪雷”欢迎入口，固定将“欧乐影院”放在第一位并显示为“欢迎来到蛋壳影院”。这按站点标识保存，自动同步后仍会保持；若上游缺少欧乐入口，会尝试候补来源或保留原配置。
 
 ## 客户端配置
 
