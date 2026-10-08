@@ -1,11 +1,11 @@
 {
-  "sync_time": "2026-10-07T23:05:07.000374+00:00",
+  "sync_time": "2026-10-08T06:03:52.590402+00:00",
   "profiles": [
     {
       "name": "jsm",
       "source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
-      "sites_kept": 61,
-      "sites_removed": 88,
+      "sites_kept": 63,
+      "sites_removed": 90,
       "removed_sites": [
         "搜索 • 豆瓣",
         "配置 • 中心",
@@ -17,6 +17,7 @@
         "快映 • 4K",
         "木偶 • 4K",
         "闪电 • 4K",
+        "蜡笔 • 4K",
         "多多 • 4K",
         "八零 • 4K",
         "虎斑 • 4K",
@@ -94,12 +95,15 @@
         "聚合 • 网易公版",
         "手机｜推送",
         "配置接口完全免费",
-        "请勿相信视频中任何广告"
+        "请勿相信视频中任何广告",
+        "苹果 • APP"
       ],
       "renamed": null,
       "changed_files": [
         "jsm_upstream.json",
-        "playback_candidates_jsm.json"
+        "jar/jsm_spider.jar",
+        "playback_candidates_jsm.json",
+        "jsm_backup.json"
       ],
       "status": "updated",
       "using_fallback": false,
@@ -108,8 +112,8 @@
     {
       "name": "tvbox",
       "source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
-      "sites_kept": 67,
-      "sites_removed": 82,
+      "sites_kept": 69,
+      "sites_removed": 84,
       "removed_sites": [
         "搜索 • 豆瓣",
         "配置 • 中心",
@@ -122,6 +126,7 @@
         "快映 • 4K",
         "木偶 • 4K",
         "闪电 • 4K",
+        "蜡笔 • 4K",
         "多多 • 4K",
         "八零 • 4K",
         "虎斑 • 4K",
@@ -192,7 +197,8 @@
         "聚合 • 网易公版",
         "手机｜推送",
         "配置接口完全免费",
-        "请勿相信视频中任何广告"
+        "请勿相信视频中任何广告",
+        "苹果 • APP"
       ],
       "renamed": {
         "from": "欧乐影院 • 外",
@@ -200,7 +206,9 @@
       },
       "changed_files": [
         "tvbox_upstream.json",
-        "playback_candidates_tvbox.json"
+        "jar/tvbox_spider.jar",
+        "playback_candidates_tvbox.json",
+        "tvbox_config.json"
       ],
       "status": "updated",
       "using_fallback": true,
