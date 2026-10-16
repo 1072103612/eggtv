@@ -1,10 +1,10 @@
 {
-  "sync_time": "2026-10-16T04:31:42.698347+00:00",
+  "sync_time": "2026-10-16T11:24:00.783894+00:00",
   "profiles": [
     {
       "name": "jsm",
       "source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
-      "sites_kept": 62,
+      "sites_kept": 63,
       "sites_removed": 91,
       "removed_sites": [
         "搜索 • 豆瓣",
@@ -102,7 +102,9 @@
       "renamed": null,
       "changed_files": [
         "jsm_upstream.json",
-        "playback_candidates_jsm.json"
+        "jar/jsm_spider.jar",
+        "playback_candidates_jsm.json",
+        "jsm_backup.json"
       ],
       "status": "updated",
       "using_fallback": false,
@@ -111,7 +113,7 @@
     {
       "name": "tvbox",
       "source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
-      "sites_kept": 68,
+      "sites_kept": 69,
       "sites_removed": 85,
       "removed_sites": [
         "搜索 • 豆瓣",
@@ -206,7 +208,9 @@
       },
       "changed_files": [
         "tvbox_upstream.json",
-        "playback_candidates_tvbox.json"
+        "jar/tvbox_spider.jar",
+        "playback_candidates_tvbox.json",
+        "tvbox_config.json"
       ],
       "status": "updated",
       "using_fallback": true,
