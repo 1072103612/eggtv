@@ -1,11 +1,11 @@
 {
-  "sync_time": "2026-10-17T04:25:37.632929+00:00",
+  "sync_time": "2026-10-17T10:43:48.343876+00:00",
   "profiles": [
     {
       "name": "jsm",
       "source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
-      "sites_kept": 63,
-      "sites_removed": 91,
+      "sites_kept": 62,
+      "sites_removed": 89,
       "removed_sites": [
         "搜索 • 豆瓣",
         "配置 • 中心",
@@ -24,6 +24,7 @@
         "花卷 • 4K",
         "种子 • 4K",
         "指南 • 4K",
+        "茉莉 • 4K",
         "爱盼 • 4K",
         "移动 • 4K",
         "人人 • 4K",
@@ -37,8 +38,6 @@
         "星芽 • 短剧",
         "果果 • 短剧",
         "番社 • 动漫",
-        "双星 • 动漫",
-        "咕咕 • 动漫",
         "巴士 • 动漫",
         "阿里 • 云盘",
         "夸克 • 网盘",
@@ -96,13 +95,14 @@
         "聚合 • 网易公版",
         "手机｜推送",
         "配置接口完全免费",
-        "请勿相信视频中任何广告",
-        "苹果 • APP"
+        "请勿相信视频中任何广告"
       ],
       "renamed": null,
       "changed_files": [
         "jsm_upstream.json",
-        "playback_candidates_jsm.json"
+        "jar/jsm_spider.jar",
+        "playback_candidates_jsm.json",
+        "jsm_backup.json"
       ],
       "status": "updated",
       "using_fallback": false,
@@ -111,8 +111,8 @@
     {
       "name": "tvbox",
       "source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
-      "sites_kept": 69,
-      "sites_removed": 85,
+      "sites_kept": 68,
+      "sites_removed": 83,
       "removed_sites": [
         "搜索 • 豆瓣",
         "配置 • 中心",
@@ -132,6 +132,7 @@
         "花卷 • 4K",
         "种子 • 4K",
         "指南 • 4K",
+        "茉莉 • 4K",
         "爱盼 • 4K",
         "移动 • 4K",
         "人人 • 4K",
@@ -139,8 +140,6 @@
         "双星 • 4K",
         "卡卡 • 4K",
         "番社 • 动漫",
-        "双星 • 动漫",
-        "咕咕 • 动漫",
         "巴士 • 动漫",
         "阿里 • 云盘",
         "夸克 • 网盘",
@@ -197,8 +196,7 @@
         "聚合 • 网易公版",
         "手机｜推送",
         "配置接口完全免费",
-        "请勿相信视频中任何广告",
-        "苹果 • APP"
+        "请勿相信视频中任何广告"
       ],
       "renamed": {
         "from": "欧乐影院 • 外",
@@ -206,7 +204,9 @@
       },
       "changed_files": [
         "tvbox_upstream.json",
-        "playback_candidates_tvbox.json"
+        "jar/tvbox_spider.jar",
+        "playback_candidates_tvbox.json",
+        "tvbox_config.json"
       ],
       "status": "updated",
       "using_fallback": true,
