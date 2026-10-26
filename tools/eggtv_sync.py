@@ -431,6 +431,80 @@ def update_spider_field(
 
 # --- Mirrors ---
 
+def rewrite_mirror_urls(value: JsonValue, repo_config: Dict[str, Any], transport: str) -> JsonValue:
+    """Route GitHub dependencies through the same transport as the config."""
+    if transport not in {"jsdelivr", "proxy"}:
+        raise SyncError(f"unsupported mirror transport: {transport}")
+    if isinstance(value, dict):
+        return {key: rewrite_mirror_urls(item, repo_config, transport) for key, item in value.items()}
+    if isinstance(value, list):
+        return [rewrite_mirror_urls(item, repo_config, transport) for item in value]
+    if not isinstance(value, str):
+        return value
+    raw_base = repo_config.get("raw_base", "").rstrip("/")
+    source = normalize_source_url(value)
+    if raw_base and source.startswith(raw_base + "/"):
+        source = (f"https://raw.githubusercontent.com/{repo_config['github_repo']}/"
+                  f"{repo_config.get('branch', 'main')}/" + source[len(raw_base) + 1:])
+    parsed = urllib.parse.urlsplit(source)
+    if parsed.hostname != "raw.githubusercontent.com":
+        return value
+    parts = parsed.path.lstrip("/").split("/", 3)
+    if len(parts) != 4:
+        return value
+    if transport == "proxy":
+        return "https://gh-proxy.com/" + source
+    owner, repo, ref, resource = parts
+    path = f"/gh/{owner}/{repo}@{ref}/{resource}"
+    return urllib.parse.urlunsplit(("https", "cdn.jsdelivr.net", path, parsed.query, parsed.fragment))
+
+
+def generate_mirror_variants(repo_root: Path, repo_config: Dict[str, Any],
+                             profiles: Dict[str, Any]) -> List[Path]:
+    """Publish complete alternate configs and immutable, checksum-named tools."""
+    mirrors = repo_config.get("mirrors", {})
+    if not mirrors.get("enabled"):
+        return []
+    transports = list(dict.fromkeys(mirrors.get("variant_transports", [])))
+    if any(item not in {"jsdelivr", "proxy"} for item in transports):
+        raise SyncError("unsupported mirror transport")
+    if not transports:
+        return []
+    repo_root = repo_root.resolve()
+    changed = []
+    for profile in profiles.values():
+        published = ensure_relative_to_repo(repo_root, profile["publish_output"])
+        if not published.exists():
+            continue
+        payload = load_json(published)
+        validate_source_payload(payload)
+        spider = profile.get("spider", {})
+        tool = ensure_relative_to_repo(repo_root, spider.get("download_to", ""))
+        if not tool.is_file() or not jar_supports_sites(tool.read_bytes(), payload):
+            raise SyncError(f"cannot build mirror with invalid tool: {tool}")
+        digest = md5_file(tool)
+        expected = payload["spider"].split(";md5;", 1)
+        if len(expected) != 2 or expected[1] != digest:
+            raise SyncError("mirror tool checksum does not match published config")
+        immutable = repo_root / "jar" / f"mirror-{digest}.jar"
+        if not immutable.exists() or md5_file(immutable) != digest:
+            immutable.parent.mkdir(parents=True, exist_ok=True)
+            temp = immutable.with_suffix(".jar.tmp")
+            shutil.copyfile(tool, temp)
+            temp.replace(immutable)
+            changed.append(immutable)
+        mirrored = copy.deepcopy(payload)
+        mirrored["spider"] = (compute_raw_base(repo_root, repo_config) +
+                              f"/jar/{immutable.name};md5;{digest}")
+        for transport in transports:
+            suffix = "cdn" if transport == "jsdelivr" else "proxy"
+            output = published.with_name(published.stem + f"_{suffix}" + published.suffix)
+            variant = rewrite_mirror_urls(mirrored, repo_config, transport)
+            if save_json(output, variant):
+                changed.append(output)
+    return changed
+
+
 def generate_mirrors_config(
     repo_root: Path,
     repo_config: Dict[str, Any],
@@ -464,6 +538,12 @@ def generate_mirrors_config(
         mirrors_payload["profiles"][profile_name] = {
             "config_url": f"{raw_base}/{publish_output.relative_to(repo_root)}",
             "mirrors": profile_cdns,
+            "complete_mirrors": [
+                rewrite_mirror_urls(
+                    f"{raw_base}/{publish_output.relative_to(repo_root).with_name(publish_output.stem + ('_cdn' if transport == 'jsdelivr' else '_proxy') + publish_output.suffix)}",
+                    repo_config, transport)
+                for transport in mirrors_config.get("variant_transports", [])
+            ],
         }
 
     mirrors_path = repo_root / "mirrors.json"
@@ -1197,6 +1277,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
     resolved_profiles = {name: config["profiles"].get(name, {}) for name in config["profiles"]}
     if not dry_run:
         changed_files.extend(reconcile_spider_fields(repo_root, repo_config, resolved_profiles))
+        changed_files.extend(generate_mirror_variants(repo_root, repo_config, resolved_profiles))
         mirror_file = generate_mirrors_config(repo_root, repo_config, resolved_profiles)
         if mirror_file:
             changed_files.append(mirror_file)

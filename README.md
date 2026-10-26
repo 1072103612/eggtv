@@ -124,6 +124,17 @@ https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json
 
 > ⚠️ `raw.githubusercontent.com` 在国内间歇性被墙，优先使用主配置地址（GitHub Pages）或 jsDelivr 备用地址。
 
+### 网络不稳定时的完整备用线路
+
+若配置地址时快时慢或一直加载，可在 TVBox 的配置设置中改用以下任一地址：
+
+```text
+https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config_cdn.json
+https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config_proxy.json
+```
+
+这两份配置同时切换配置、播放工具及 GitHub 脚本的下载线路，避免只切换 JSON、工具仍从 GitHub Pages 下载。播放工具采用含校验值的独立文件名，防止镜像缓存新旧版本混用。每次同步自动维护，原配置不受影响。第三方影片站及其接口不改写；镜像可用性和速度仍取决于电视所在网络，选择更稳定的一条即可。
+
 ### 副配置地址
 ```
 https://1072103612.github.io/eggtv/jsm_backup.json

@@ -220,6 +220,42 @@ class SyncTests(unittest.TestCase):
         self.assertNotIn("156.238.235.72", json.dumps(config))
         self.assertNotIn(profile["upstream_url"], profile["upstream_fallback_urls"])
 
+    def test_complete_mirror_rewrites_github_dependencies_only(self):
+        repo = {"github_repo": "owner/cinema", "branch": "main",
+                "raw_base": "https://owner.github.io/cinema"}
+        original = {"spider": "https://owner.github.io/cinema/jar/a.jar;md5;abc",
+                    "sites": [{"api": "https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py",
+                               "ext": {"url": "https://example.com/movies", "selector": "body > a"}}]}
+        cdn = sync.rewrite_mirror_urls(original, repo, "jsdelivr")
+        self.assertEqual(cdn["spider"], "https://cdn.jsdelivr.net/gh/owner/cinema@main/jar/a.jar;md5;abc")
+        self.assertEqual(cdn["sites"][0]["api"],
+                         "https://cdn.jsdelivr.net/gh/qist/tvbox@master/py/OleLive.py")
+        self.assertEqual(cdn["sites"][0]["ext"], original["sites"][0]["ext"])
+        proxy = sync.rewrite_mirror_urls(original, repo, "proxy")
+        self.assertEqual(proxy["sites"][0]["api"],
+                         "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py")
+        self.assertTrue(original["spider"].startswith(repo["raw_base"]))
+
+    def test_complete_mirror_uses_immutable_matching_tool(self):
+        self.run_sync()
+        before = (self.root / "config.json").read_bytes()
+        repo = {**self.repo, "github_repo": "owner/cinema", "branch": "main",
+                "mirrors": {"enabled": True, "variant_transports": ["jsdelivr", "proxy"]}}
+        profiles = {"main": self.profile}
+        changed = sync.generate_mirror_variants(self.root, repo, profiles)
+        self.assertEqual(len(changed), 3)
+        digest = sync.md5_file(self.root / "jar/main.jar")
+        self.assertEqual((self.root / f"jar/mirror-{digest}.jar").read_bytes(),
+                         (self.root / "jar/main.jar").read_bytes())
+        variant = sync.load_json(self.root / "config_cdn.json")
+        self.assertEqual(variant["spider"],
+                         f"https://cdn.jsdelivr.net/gh/owner/cinema@main/jar/mirror-{digest}.jar;md5;{digest}")
+        self.assertEqual((self.root / "config.json").read_bytes(), before)
+        self.assertEqual(sync.generate_mirror_variants(self.root, repo, profiles), [])
+        (self.root / "jar/main.jar").write_bytes(make_jar("Other"))
+        with self.assertRaises(sync.SyncError):
+            sync.generate_mirror_variants(self.root, repo, profiles)
+
     def test_dry_run_does_not_create_files(self):
         result = self.run_sync(dry_run=True)
         self.assertTrue(result["changed_files"])
