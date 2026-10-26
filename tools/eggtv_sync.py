@@ -505,6 +505,30 @@ def generate_mirror_variants(repo_root: Path, repo_config: Dict[str, Any],
     return changed
 
 
+def publish_dependency_transport(repo_root: Path, repo_config: Dict[str, Any],
+                                 profiles: Dict[str, Any]) -> List[Path]:
+    """Keep subscription URLs stable while switching their dependency transport."""
+    transport = repo_config.get("publish_dependency_transport")
+    if not transport:
+        return []
+    mirrors = repo_config.get("mirrors", {})
+    if (not mirrors.get("enabled") or transport not in {"jsdelivr", "proxy"}
+            or transport not in mirrors.get("variant_transports", [])):
+        raise SyncError("published dependency transport must have an enabled complete mirror")
+    suffix = "cdn" if transport == "jsdelivr" else "proxy"
+    changed = []
+    for profile in profiles.values():
+        published = ensure_relative_to_repo(repo_root, profile["publish_output"])
+        if not published.exists():
+            continue
+        variant = published.with_name(published.stem + f"_{suffix}" + published.suffix)
+        payload = load_json(variant)
+        validate_source_payload(payload)
+        if save_json(published, payload):
+            changed.append(published)
+    return changed
+
+
 def generate_mirrors_config(
     repo_root: Path,
     repo_config: Dict[str, Any],
@@ -1278,6 +1302,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
     if not dry_run:
         changed_files.extend(reconcile_spider_fields(repo_root, repo_config, resolved_profiles))
         changed_files.extend(generate_mirror_variants(repo_root, repo_config, resolved_profiles))
+        changed_files.extend(publish_dependency_transport(repo_root, repo_config, resolved_profiles))
         mirror_file = generate_mirrors_config(repo_root, repo_config, resolved_profiles)
         if mirror_file:
             changed_files.append(mirror_file)

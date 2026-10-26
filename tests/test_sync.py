@@ -256,6 +256,26 @@ class SyncTests(unittest.TestCase):
         with self.assertRaises(sync.SyncError):
             sync.generate_mirror_variants(self.root, repo, profiles)
 
+    def test_original_subscription_publishes_complete_transport(self):
+        self.run_sync()
+        repo = {**self.repo, "github_repo": "owner/cinema", "branch": "main",
+                "mirrors": {"enabled": True, "variant_transports": ["proxy"]},
+                "publish_dependency_transport": "proxy"}
+        profiles = {"main": self.profile}
+        original = sync.load_json(self.root / "config.json")
+        sync.generate_mirror_variants(self.root, repo, profiles)
+        changed = sync.publish_dependency_transport(self.root, repo, profiles)
+        self.assertEqual(len(changed), 1)
+        published = sync.load_json(self.root / "config.json")
+        self.assertEqual(published, sync.load_json(self.root / "config_proxy.json"))
+        self.assertEqual(published["sites"], original["sites"])
+        self.assertTrue(published["spider"].startswith("https://gh-proxy.com/"))
+        self.assertIn("/jar/mirror-", published["spider"])
+        self.assertEqual(sync.publish_dependency_transport(self.root, repo, profiles), [])
+        repo["mirrors"]["enabled"] = False
+        with self.assertRaises(sync.SyncError):
+            sync.publish_dependency_transport(self.root, repo, profiles)
+
     def test_dry_run_does_not_create_files(self):
         result = self.run_sync(dry_run=True)
         self.assertTrue(result["changed_files"])

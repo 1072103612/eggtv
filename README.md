@@ -124,6 +124,8 @@ https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json
 
 > ⚠️ `raw.githubusercontent.com` 在国内间歇性被墙，优先使用主配置地址（GitHub Pages）或 jsDelivr 备用地址。
 
+主、副配置的原订阅地址继续有效，返回的配置会通过代理线路下载播放工具和 GitHub 配套脚本，无需重新填写订阅地址。此设置仅改善后续资源下载，GitHub Pages 首次配置请求本身的网络等待仍可能存在。
+
 ### 网络不稳定时的完整备用线路
 
 若配置地址时快时慢或一直加载，可在 TVBox 的配置设置中改用以下完整备用地址：
