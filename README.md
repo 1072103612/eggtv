@@ -33,6 +33,8 @@
 
 ### 同步片源
 
+主、副配置均以 `https://raw.githubusercontent.com/qist/tvbox/master/jsm.json` 为首选上游，jsDelivr 为同一来源的候补镜像；旧 IP 上游已停用。这是两套不同过滤规则的菜单，不代表两个独立片源供应方。同步报告会记录首选来源、实际来源和候补切换前的失败原因。
+
 ```bash
 python3 tools/eggtv_sync.py sync --all --push
 ```
@@ -62,7 +64,7 @@ python3 tools/eggtv_sync.py --no-proxy sync --all --dry-run
 
 ### 手动触发同步
 
-GitHub Actions 每 6 小时自动同步一次，也可手动触发：
+GitHub Actions 每 6 小时自动同步一次；主分支修改上游配置或同步脚本后也会立即同步，生成文件的提交不会重复触发。也可手动触发：
 
 1. 进入 https://github.com/1072103612/eggtv/actions/workflows/sync-sources.yml
 2. 点击 "Run workflow"

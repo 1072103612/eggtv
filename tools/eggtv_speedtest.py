@@ -29,6 +29,7 @@ def catalog_url(url):
 
 
 def collect_targets(root, config, profile_names):
+    root = root.resolve()
     targets, skipped = {}, []
 
     def add(profile, name, group, url):

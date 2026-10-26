@@ -22,7 +22,7 @@
   "profiles": {
     "tvbox": {
       "description": "主配置",
-      "upstream_url": "http://156.238.235.72:1111/jjzzVIP110.json",
+      "upstream_url": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
       "fetch_timeout": 60,
       "upstream_output": "tvbox_upstream.json",
       "publish_output": "tvbox_config.json",
@@ -90,7 +90,6 @@
       },
       "rename_first": "欢迎来到蛋壳影院",
       "upstream_fallback_urls": [
-        "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
         "https://cdn.jsdelivr.net/gh/qist/tvbox@master/jsm.json"
       ],
       "first_site_key": "OleLive"

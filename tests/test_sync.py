@@ -190,6 +190,36 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(published["sites"][0]["api"], "csp_Backup")
         self.assertTrue(sync.jar_supports_sites((self.root / "jar/main.jar").read_bytes(), published))
 
+    def test_fallback_failure_reason_survives_report(self):
+        self.responses["/source/jar/tool.jar"] = b"<html>not a jar</html>"
+        self.responses["/backup/config.json"] = json.dumps(payload("csp_Backup")).encode()
+        self.responses["/backup/jar/tool.jar"] = make_jar("Backup")
+        self.profile["upstream_fallback_urls"] = [self.base + "/backup/config.json"]
+        result = self.run_sync()
+        self.assertEqual(result["configured_source"], self.profile["upstream_url"])
+        self.assertEqual([a["status"] for a in result["source_attempts"]], ["failed", "selected"])
+        self.assertIn("invalid spider", result["source_attempts"][0]["error"])
+        with contextlib.redirect_stdout(io.StringIO()):
+            sync.generate_sync_report([result], self.root)
+        report = sync.load_json(self.root / "sync_report.json")["profiles"][0]
+        self.assertEqual(report["source_attempts"], result["source_attempts"])
+        self.assertIn("invalid spider", (self.root / "sync_report.md").read_text())
+
+    def test_explicit_override_is_not_fallback(self):
+        self.profile["upstream_url"] = self.base + "/unused/config.json"
+        result = self.run_sync(upstream_override=self.base + "/source/config.json")
+        self.assertFalse(result["using_fallback"])
+        self.assertEqual(result["configured_source"], self.base + "/source/config.json")
+        self.assertEqual(len(result["source_attempts"]), 1)
+
+    def test_published_primary_uses_qist_without_legacy_ip(self):
+        config = sync.load_json(Path(__file__).resolve().parents[1] / "eggtv_sync.json")
+        profile = config["profiles"]["tvbox"]
+        self.assertEqual(profile["upstream_url"],
+                         "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json")
+        self.assertNotIn("156.238.235.72", json.dumps(config))
+        self.assertNotIn(profile["upstream_url"], profile["upstream_fallback_urls"])
+
     def test_dry_run_does_not_create_files(self):
         result = self.run_sync(dry_run=True)
         self.assertTrue(result["changed_files"])

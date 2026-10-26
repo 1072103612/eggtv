@@ -1,6 +1,14 @@
 name: Sync Sources
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - eggtv_sync.json
+      - tools/eggtv_sync.py
+      - tools/eggtv_speedtest.py
+      - tools/playback_policy.py
+      - .github/workflows/sync-sources.yml
   workflow_dispatch:
     inputs:
       profile:

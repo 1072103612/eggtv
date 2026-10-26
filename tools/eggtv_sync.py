@@ -700,15 +700,22 @@ def sync_profile(
 ) -> Dict[str, Any]:
     # 下载、清洗及校验都成功后，才更新正式文件。
     errors = []
-    for upstream_source in resolve_upstream_sources(repo_root, profile_config, upstream_override):
+    attempts = []
+    sources = resolve_upstream_sources(repo_root, profile_config, upstream_override)
+    primary_source = sources[0]
+    for upstream_source in sources:
         try:
             result = stage_profile(repo_root, repo_config, profile_name, profile_config,
                                    upstream_source, network, dry_run=dry_run)
-            result["using_fallback"] = upstream_source != normalize_source_url(profile_config.get("upstream_url", ""))
+            attempts.append({"source": upstream_source, "status": "selected", "error": None})
+            result["configured_source"] = primary_source
+            result["using_fallback"] = upstream_source != primary_source
+            result["source_attempts"] = attempts
             return result
         except (SyncError, OSError, subprocess.SubprocessError) as exc:
-            errors.append(str(exc))
-            print(f"[{profile_name}] 此来源不完整，尝试候补: {upstream_source}")
+            errors.append(f"{upstream_source}: {exc}")
+            attempts.append({"source": upstream_source, "status": "failed", "error": str(exc)})
+            print(f"[{profile_name}] 来源失败: {upstream_source}: {exc}")
     raise SyncError(" | ".join(errors))
 
 
@@ -716,7 +723,7 @@ def stage_profile(repo_root: Path, repo_config: Dict[str, Any], profile_name: st
                   profile_config: Dict[str, Any], upstream_source: str,
                   network: Optional[Dict[str, Any]], dry_run: bool = False) -> Dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="eggtv-sync-") as stage_dir:
-        stage_root = Path(stage_dir)
+        stage_root = Path(stage_dir).resolve()
         staged_config = copy.deepcopy(profile_config)
         staged_config["upstream_url"] = upstream_source
         staged_config["upstream_fallback_urls"] = []
@@ -1071,6 +1078,7 @@ def collect_target_profiles(config: Dict[str, Any], args: argparse.Namespace) ->
 
 def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path:
     """生成同步报告"""
+    repo_root = repo_root.resolve()
     report = {
         "sync_time": datetime.now(timezone.utc).isoformat(),
         "profiles": []
@@ -1087,7 +1095,9 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
         })
         report["profiles"][-1].update({"status": r.get("status", "updated"),
                                       "using_fallback": r.get("using_fallback", False),
-                                      "error": r.get("error")})
+                                      "error": r.get("error"),
+                                      "configured_source": r.get("configured_source", r["source"]),
+                                      "source_attempts": r.get("source_attempts", [])})
 
     # 生成 Markdown 报告
     md_lines = []
@@ -1107,6 +1117,11 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
         md_lines.append(f"## 📺 {profile.upper()} 配置")
         md_lines.append("")
         md_lines.append(f"- **来源**: {r['source']}")
+        if r.get("configured_source"):
+            md_lines.append(f"- **首选来源**: {r['configured_source']}")
+        for attempt in r.get("source_attempts", []):
+            if attempt["status"] == "failed":
+                md_lines.append(f"- **来源失败**: {attempt['source']} — {attempt['error']}")
         if r.get("error"):
             md_lines.append(f"- **状态**: 更新失败，保留原配置。原因: {r['error']}")
         elif r.get("using_fallback"):
