@@ -1,12 +1,13 @@
 # 🥚 蛋壳影院 - 同步报告
 
-**同步时间**: 2026-10-26 04:46:47 UTC
+**同步时间**: 2026-10-26 12:13:17 UTC
 
 ---
 
 ## 📺 JSM 配置
 
 - **来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
+- **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **保留站点**: 61 个 ✅
 - **移除站点**: 91 个 🗑️
 
@@ -38,7 +39,7 @@
 ## 📺 TVBOX 配置
 
 - **来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
-- **状态**: 首选来源不完整，已使用整套候补来源
+- **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **保留站点**: 68 个 ✅
 - **移除站点**: 84 个 🗑️
 - **重命名**: 欧乐影院 • 外 → 欢迎来到蛋壳影院

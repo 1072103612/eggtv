@@ -1,5 +1,5 @@
 {
-  "sync_time": "2026-10-26T04:46:47.706144+00:00",
+  "sync_time": "2026-10-26T12:13:17.309783+00:00",
   "profiles": [
     {
       "name": "jsm",
@@ -106,7 +106,15 @@
       ],
       "status": "updated",
       "using_fallback": false,
-      "error": null
+      "error": null,
+      "configured_source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
+      "source_attempts": [
+        {
+          "source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
+          "status": "selected",
+          "error": null
+        }
+      ]
     },
     {
       "name": "tvbox",
@@ -208,8 +216,16 @@
         "playback_candidates_tvbox.json"
       ],
       "status": "updated",
-      "using_fallback": true,
-      "error": null
+      "using_fallback": false,
+      "error": null,
+      "configured_source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
+      "source_attempts": [
+        {
+          "source": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
+          "status": "selected",
+          "error": null
+        }
+      ]
     }
   ]
 }
