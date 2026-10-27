@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "measured_at": "2026-10-27T05:04:39.790782+00:00",
+  "measured_at": "2026-10-27T12:11:21.805848+00:00",
   "location": "GitHub 云端（仅供参考）",
   "profile_labels": {
     "jsm": "副配置",
@@ -8,17 +8,17 @@
   },
   "samples": 2,
   "timeout_seconds": 8,
-  "elapsed_seconds": 15.5,
+  "elapsed_seconds": 17.2,
   "network_note": "此次按直连模式测量。",
   "scope": "HTTP response and supporting-file download; actual playback is untested",
   "summary": {
     "targets": 54,
-    "normal": 46,
+    "normal": 45,
     "intermittent": 0,
-    "failed": 8
+    "failed": 9
   },
   "recommended_config_urls": {
-    "jsm": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
+    "jsm": "https://1072103612.github.io/eggtv/jsm_backup.json",
     "tvbox": "https://1072103612.github.io/eggtv/tvbox_config.json"
   },
   "results": [
@@ -36,224 +36,29 @@
           "url": "https://1072103612.github.io/eggtv/tvbox_config.json",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 146.82700000000003,
-          "time_total_ms": 154.577,
+          "time_starttransfer_ms": 85.21,
+          "time_total_ms": 86.65100000000001,
           "download_bytes": 43064,
           "connection_mode": "direct",
-          "download_kbps": 272.06303331025964
+          "download_kbps": 485.334127707701
         },
         {
           "url": "https://1072103612.github.io/eggtv/tvbox_config.json",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 75.616,
-          "time_total_ms": 83.495,
+          "time_starttransfer_ms": 31.675,
+          "time_total_ms": 32.973,
           "download_bytes": 43064,
           "connection_mode": "direct",
-          "download_kbps": 503.6791125217079
+          "download_kbps": 1275.4280016983591
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 111.2,
-      "median_total_ms": 119.0,
-      "median_download_kbps": 387.9,
-      "status": "正常"
-    },
-    {
-      "group": "config",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
-      "names": [
-        "主配置"
-      ],
-      "profiles": [
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 250.10100000000003,
-          "time_total_ms": 253.22400000000002,
-          "download_bytes": 43064,
-          "connection_mode": "direct",
-          "download_kbps": 166.07702074053012
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 88.394,
-          "time_total_ms": 91.422,
-          "download_bytes": 43064,
-          "connection_mode": "direct",
-          "download_kbps": 460.00620747741243
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 169.2,
-      "median_total_ms": 172.3,
-      "median_download_kbps": 313.0,
-      "status": "正常"
-    },
-    {
-      "group": "config",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
-      "names": [
-        "副配置"
-      ],
-      "profiles": [
-        "jsm"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 251.69399999999996,
-          "time_total_ms": 252.106,
-          "download_bytes": 41576,
-          "connection_mode": "direct",
-          "download_kbps": 161.04956843549937
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 108.709,
-          "time_total_ms": 110.736,
-          "download_bytes": 41576,
-          "connection_mode": "direct",
-          "download_kbps": 366.6518792443288
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 180.2,
-      "median_total_ms": 181.4,
-      "median_download_kbps": 263.9,
-      "status": "正常"
-    },
-    {
-      "group": "config",
-      "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
-      "names": [
-        "主配置"
-      ],
-      "profiles": [
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 331.256,
-          "time_total_ms": 339.42499999999995,
-          "download_bytes": 43064,
-          "connection_mode": "direct",
-          "download_kbps": 123.89979376887383
-        },
-        {
-          "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 149.279,
-          "time_total_ms": 150.479,
-          "download_bytes": 43064,
-          "connection_mode": "direct",
-          "download_kbps": 279.47213564683443
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 240.3,
-      "median_total_ms": 245.0,
-      "median_download_kbps": 201.7,
-      "status": "正常"
-    },
-    {
-      "group": "config",
-      "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
-      "names": [
-        "副配置"
-      ],
-      "profiles": [
-        "jsm"
-      ],
-      "attempts": [
-        {
-          "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 224.447,
-          "time_total_ms": 232.931,
-          "download_bytes": 41576,
-          "connection_mode": "direct",
-          "download_kbps": 174.30725193297587
-        },
-        {
-          "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 311.875,
-          "time_total_ms": 313.165,
-          "download_bytes": 41576,
-          "connection_mode": "direct",
-          "download_kbps": 129.6491067009404
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 268.2,
-      "median_total_ms": 273.0,
-      "median_download_kbps": 152.0,
-      "status": "正常"
-    },
-    {
-      "group": "config",
-      "url": "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config.json",
-      "names": [
-        "主配置"
-      ],
-      "profiles": [
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 534.5849999999999,
-          "time_total_ms": 535.7429999999999,
-          "download_bytes": 43064,
-          "connection_mode": "direct",
-          "download_kbps": 78.49787584718793
-        },
-        {
-          "url": "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config.json",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 51.867000000000004,
-          "time_total_ms": 53.136,
-          "download_bytes": 43064,
-          "connection_mode": "direct",
-          "download_kbps": 791.4537695724179
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 293.2,
-      "median_total_ms": 294.4,
-      "median_download_kbps": 435.0,
+      "median_response_ms": 58.4,
+      "median_total_ms": 59.8,
+      "median_download_kbps": 880.4,
       "status": "正常"
     },
     {
@@ -270,29 +75,107 @@
           "url": "https://1072103612.github.io/eggtv/jsm_backup.json",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 629.385,
-          "time_total_ms": 637.7270000000001,
+          "time_starttransfer_ms": 103.926,
+          "time_total_ms": 105.007,
           "download_bytes": 41576,
           "connection_mode": "direct",
-          "download_kbps": 63.666055381064304
+          "download_kbps": 386.6557705676764
         },
         {
           "url": "https://1072103612.github.io/eggtv/jsm_backup.json",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 43.192,
-          "time_total_ms": 51.083000000000006,
+          "time_starttransfer_ms": 33.667,
+          "time_total_ms": 35.02,
           "download_bytes": 41576,
           "connection_mode": "direct",
-          "download_kbps": 794.8155452890394
+          "download_kbps": 1159.3821387778412
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 336.3,
-      "median_total_ms": 344.4,
-      "median_download_kbps": 429.2,
+      "median_response_ms": 68.8,
+      "median_total_ms": 70.0,
+      "median_download_kbps": 773.0,
+      "status": "正常"
+    },
+    {
+      "group": "config",
+      "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
+      "names": [
+        "主配置"
+      ],
+      "profiles": [
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 141.351,
+          "time_total_ms": 142.68900000000002,
+          "download_bytes": 43064,
+          "connection_mode": "direct",
+          "download_kbps": 294.72970936792603
+        },
+        {
+          "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 21.451,
+          "time_total_ms": 22.899,
+          "download_bytes": 43064,
+          "connection_mode": "direct",
+          "download_kbps": 1836.5294335997205
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 81.4,
+      "median_total_ms": 82.8,
+      "median_download_kbps": 1065.6,
+      "status": "正常"
+    },
+    {
+      "group": "config",
+      "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
+      "names": [
+        "副配置"
+      ],
+      "profiles": [
+        "jsm"
+      ],
+      "attempts": [
+        {
+          "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 166.47899999999998,
+          "time_total_ms": 167.77900000000002,
+          "download_bytes": 41576,
+          "connection_mode": "direct",
+          "download_kbps": 241.99430500837408
+        },
+        {
+          "url": "https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 24.823,
+          "time_total_ms": 26.079,
+          "download_bytes": 41576,
+          "connection_mode": "direct",
+          "download_kbps": 1556.868073929215
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 95.7,
+      "median_total_ms": 96.9,
+      "median_download_kbps": 899.4,
       "status": "正常"
     },
     {
@@ -309,29 +192,146 @@
           "url": "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/jsm_backup.json",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 616.71,
-          "time_total_ms": 618.3929999999999,
+          "time_starttransfer_ms": 186.315,
+          "time_total_ms": 186.66,
           "download_bytes": 41576,
           "connection_mode": "direct",
-          "download_kbps": 65.65656871924489
+          "download_kbps": 217.5161389692489
         },
         {
           "url": "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/jsm_backup.json",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 59.871,
-          "time_total_ms": 61.493,
+          "time_starttransfer_ms": 66.01,
+          "time_total_ms": 67.10199999999999,
           "download_bytes": 41576,
           "connection_mode": "direct",
-          "download_kbps": 660.2631600344755
+          "download_kbps": 605.0723152812137
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 338.3,
-      "median_total_ms": 339.9,
-      "median_download_kbps": 363.0,
+      "median_response_ms": 126.2,
+      "median_total_ms": 126.9,
+      "median_download_kbps": 411.3,
+      "status": "正常"
+    },
+    {
+      "group": "config",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
+      "names": [
+        "主配置"
+      ],
+      "profiles": [
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 192.341,
+          "time_total_ms": 192.881,
+          "download_bytes": 43064,
+          "connection_mode": "direct",
+          "download_kbps": 218.03437093337342
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 97.633,
+          "time_total_ms": 98.398,
+          "download_bytes": 43064,
+          "connection_mode": "direct",
+          "download_kbps": 427.3937224333828
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 145.0,
+      "median_total_ms": 145.6,
+      "median_download_kbps": 322.7,
+      "status": "正常"
+    },
+    {
+      "group": "config",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
+      "names": [
+        "副配置"
+      ],
+      "profiles": [
+        "jsm"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 174.39499999999998,
+          "time_total_ms": 174.696,
+          "download_bytes": 41576,
+          "connection_mode": "direct",
+          "download_kbps": 232.41266256811835
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jsm_backup.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 121.073,
+          "time_total_ms": 124.34,
+          "download_bytes": 41576,
+          "connection_mode": "direct",
+          "download_kbps": 326.5366133183207
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 147.7,
+      "median_total_ms": 149.5,
+      "median_download_kbps": 279.5,
+      "status": "正常"
+    },
+    {
+      "group": "config",
+      "url": "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config.json",
+      "names": [
+        "主配置"
+      ],
+      "profiles": [
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 260.41700000000003,
+          "time_total_ms": 260.879,
+          "download_bytes": 43064,
+          "connection_mode": "direct",
+          "download_kbps": 161.20380521237814
+        },
+        {
+          "url": "https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config.json",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 37.287,
+          "time_total_ms": 37.726,
+          "download_bytes": 43064,
+          "connection_mode": "direct",
+          "download_kbps": 1114.7401659333086
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 148.9,
+      "median_total_ms": 149.3,
+      "median_download_kbps": 638.0,
       "status": "正常"
     },
     {
@@ -350,29 +350,29 @@
           "url": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 57.283,
-          "time_total_ms": 65.543,
+          "time_starttransfer_ms": 30.592000000000002,
+          "time_total_ms": 32.249,
           "download_bytes": 47312,
           "connection_mode": "direct",
-          "download_kbps": 704.9284439223105
+          "download_kbps": 1432.6994635492574
         },
         {
           "url": "https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 44.766,
-          "time_total_ms": 52.89,
+          "time_starttransfer_ms": 25.279,
+          "time_total_ms": 26.543,
           "download_bytes": 47312,
           "connection_mode": "direct",
-          "download_kbps": 873.5701455851768
+          "download_kbps": 1740.6896356854913
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 51.0,
-      "median_total_ms": 59.2,
-      "median_download_kbps": 789.2,
+      "median_response_ms": 27.9,
+      "median_total_ms": 29.4,
+      "median_download_kbps": 1586.7,
       "status": "正常"
     },
     {
@@ -422,189 +422,29 @@
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jar/mirror-c1978e5cec469f66f07efd37d39ec26a.jar",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 482.36600000000004,
-          "time_total_ms": 546.4010000000001,
+          "time_starttransfer_ms": 370.316,
+          "time_total_ms": 470.557,
           "download_bytes": 1925396,
           "connection_mode": "direct",
-          "download_kbps": 3441.1897695099383
+          "download_kbps": 3995.8379776520164
         },
         {
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/jar/mirror-c1978e5cec469f66f07efd37d39ec26a.jar",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 121.821,
-          "time_total_ms": 186.649,
+          "time_starttransfer_ms": 137.41400000000002,
+          "time_total_ms": 166.31199999999998,
           "download_bytes": 1925396,
           "connection_mode": "direct",
-          "download_kbps": 10073.825904505247
+          "download_kbps": 11305.675665315794
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 302.1,
-      "median_total_ms": 366.5,
-      "median_download_kbps": 6757.5,
-      "status": "正常"
-    },
-    {
-      "group": "catalog",
-      "url": "http://ffzy.tv/api.php/provide/vod/?ac=list",
-      "names": [
-        "影视 • 非凡[直连]"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "http://ffzy.tv/api.php/provide/vod/?ac=list",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 82.916,
-          "time_total_ms": 83.146,
-          "download_bytes": 5904,
-          "connection_mode": "direct",
-          "download_kbps": 69.34338392706805
-        },
-        {
-          "url": "http://ffzy.tv/api.php/provide/vod/?ac=list",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 61.181,
-          "time_total_ms": 61.532000000000004,
-          "download_bytes": 5904,
-          "connection_mode": "direct",
-          "download_kbps": 93.70124488071247
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 72.0,
-      "median_total_ms": 72.3,
-      "median_download_kbps": 81.5,
-      "status": "正常"
-    },
-    {
-      "group": "catalog",
-      "url": "https://bfzyapi.com/api.php/provide/vod/?ac=list",
-      "names": [
-        "影视 • 暴風[直连]"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://bfzyapi.com/api.php/provide/vod/?ac=list",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 122.944,
-          "time_total_ms": 123.07,
-          "download_bytes": 6747,
-          "connection_mode": "direct",
-          "download_kbps": 53.53755738604047
-        },
-        {
-          "url": "https://bfzyapi.com/api.php/provide/vod/?ac=list",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 58.583999999999996,
-          "time_total_ms": 58.681999999999995,
-          "download_bytes": 6747,
-          "connection_mode": "direct",
-          "download_kbps": 112.28089000886132
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 90.8,
-      "median_total_ms": 90.9,
-      "median_download_kbps": 82.9,
-      "status": "正常"
-    },
-    {
-      "group": "catalog",
-      "url": "https://suoniapi.com/api.php/provide/vod/?ac=list",
-      "names": [
-        "影视 • 率率[直连]"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://suoniapi.com/api.php/provide/vod/?ac=list",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 107.50800000000001,
-          "time_total_ms": 107.622,
-          "download_bytes": 6746,
-          "connection_mode": "direct",
-          "download_kbps": 61.21323358606976
-        },
-        {
-          "url": "https://suoniapi.com/api.php/provide/vod/?ac=list",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 102.33,
-          "time_total_ms": 102.42,
-          "download_bytes": 6746,
-          "connection_mode": "direct",
-          "download_kbps": 64.32230643429018
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 104.9,
-      "median_total_ms": 105.0,
-      "median_download_kbps": 62.8,
-      "status": "正常"
-    },
-    {
-      "group": "catalog",
-      "url": "https://suoniapi.com/api.php/provide/vod/at/xml/?ac=list",
-      "names": [
-        "影视 • 索尼[直连]"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://suoniapi.com/api.php/provide/vod/at/xml/?ac=list",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 135.38400000000001,
-          "time_total_ms": 135.659,
-          "download_bytes": 5731,
-          "connection_mode": "direct",
-          "download_kbps": 41.25549862154372
-        },
-        {
-          "url": "https://suoniapi.com/api.php/provide/vod/at/xml/?ac=list",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 100.494,
-          "time_total_ms": 100.58,
-          "download_bytes": 5731,
-          "connection_mode": "direct",
-          "download_kbps": 55.644061319347784
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 117.9,
-      "median_total_ms": 118.1,
-      "median_download_kbps": 48.4,
+      "median_response_ms": 253.9,
+      "median_total_ms": 318.4,
+      "median_download_kbps": 7650.8,
       "status": "正常"
     },
     {
@@ -622,36 +462,36 @@
           "url": "https://jszyapi.com/api.php/provide/vod/?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 240.875,
-          "time_total_ms": 241.395,
-          "download_bytes": 6782,
+          "time_starttransfer_ms": 95.925,
+          "time_total_ms": 96.091,
+          "download_bytes": 6674,
           "connection_mode": "direct",
-          "download_kbps": 27.436553677582385
+          "download_kbps": 67.82714432152855
         },
         {
           "url": "https://jszyapi.com/api.php/provide/vod/?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 51.477000000000004,
-          "time_total_ms": 51.581,
-          "download_bytes": 6782,
+          "time_starttransfer_ms": 59.332,
+          "time_total_ms": 59.431,
+          "download_bytes": 6674,
           "connection_mode": "direct",
-          "download_kbps": 128.40090101006183
+          "download_kbps": 109.666304201511
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 146.2,
-      "median_total_ms": 146.5,
-      "median_download_kbps": 77.9,
+      "median_response_ms": 77.6,
+      "median_total_ms": 77.8,
+      "median_download_kbps": 88.7,
       "status": "正常"
     },
     {
       "group": "catalog",
-      "url": "https://api.ukuapi.com/api.php/provide/vod/?ac=list",
+      "url": "https://suoniapi.com/api.php/provide/vod/?ac=list",
       "names": [
-        "影视 • 尤酷[直连]"
+        "影视 • 率率[直连]"
       ],
       "profiles": [
         "jsm",
@@ -659,32 +499,72 @@
       ],
       "attempts": [
         {
-          "url": "https://api.ukuapi.com/api.php/provide/vod/?ac=list",
+          "url": "https://suoniapi.com/api.php/provide/vod/?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 279.021,
-          "time_total_ms": 279.283,
-          "download_bytes": 6197,
+          "time_starttransfer_ms": 82.675,
+          "time_total_ms": 82.83600000000001,
+          "download_bytes": 7212,
           "connection_mode": "direct",
-          "download_kbps": 21.668908642846144
+          "download_kbps": 85.0230425177459
         },
         {
-          "url": "https://api.ukuapi.com/api.php/provide/vod/?ac=list",
+          "url": "https://suoniapi.com/api.php/provide/vod/?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 118.36000000000001,
-          "time_total_ms": 119.249,
-          "download_bytes": 6197,
+          "time_starttransfer_ms": 130.707,
+          "time_total_ms": 130.78799999999998,
+          "download_bytes": 7212,
           "connection_mode": "direct",
-          "download_kbps": 50.74891875403568
+          "download_kbps": 53.85026722635104
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 198.7,
-      "median_total_ms": 199.3,
-      "median_download_kbps": 36.2,
+      "median_response_ms": 106.7,
+      "median_total_ms": 106.8,
+      "median_download_kbps": 69.4,
+      "status": "正常"
+    },
+    {
+      "group": "catalog",
+      "url": "https://bfzyapi.com/api.php/provide/vod/?ac=list",
+      "names": [
+        "影视 • 暴風[直连]"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://bfzyapi.com/api.php/provide/vod/?ac=list",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 189.96099999999998,
+          "time_total_ms": 190.051,
+          "download_bytes": 6856,
+          "connection_mode": "direct",
+          "download_kbps": 35.22903062862074
+        },
+        {
+          "url": "https://bfzyapi.com/api.php/provide/vod/?ac=list",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 96.711,
+          "time_total_ms": 97.01700000000001,
+          "download_bytes": 6856,
+          "connection_mode": "direct",
+          "download_kbps": 69.01174536421452
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 143.3,
+      "median_total_ms": 143.5,
+      "median_download_kbps": 52.1,
       "status": "正常"
     },
     {
@@ -702,29 +582,29 @@
           "url": "http://tyyszy.com/api.php/provide/vod?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 252.276,
-          "time_total_ms": 252.37199999999999,
-          "download_bytes": 5843,
+          "time_starttransfer_ms": 204.936,
+          "time_total_ms": 205.057,
+          "download_bytes": 5722,
           "connection_mode": "direct",
-          "download_kbps": 22.60969793598339
+          "download_kbps": 27.250426101035323
         },
         {
           "url": "http://tyyszy.com/api.php/provide/vod?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 167.981,
-          "time_total_ms": 168.056,
-          "download_bytes": 5843,
+          "time_starttransfer_ms": 191.281,
+          "time_total_ms": 191.35,
+          "download_bytes": 5722,
           "connection_mode": "direct",
-          "download_kbps": 33.953293470628836
+          "download_kbps": 29.202459498301543
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 210.1,
-      "median_total_ms": 210.2,
-      "median_download_kbps": 28.3,
+      "median_response_ms": 198.1,
+      "median_total_ms": 198.2,
+      "median_download_kbps": 28.2,
       "status": "正常"
     },
     {
@@ -742,36 +622,36 @@
           "url": "http://caiji.dyttzyapi.com/api.php/provide/vod?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 341.826,
-          "time_total_ms": 342.2,
-          "download_bytes": 5887,
+          "time_starttransfer_ms": 267.276,
+          "time_total_ms": 267.641,
+          "download_bytes": 6103,
           "connection_mode": "direct",
-          "download_kbps": 16.80018538135593
+          "download_kbps": 22.268490020213644
         },
         {
           "url": "http://caiji.dyttzyapi.com/api.php/provide/vod?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 127.726,
-          "time_total_ms": 127.96099999999998,
-          "download_bytes": 5887,
+          "time_starttransfer_ms": 135.963,
+          "time_total_ms": 136.329,
+          "download_bytes": 6102,
           "connection_mode": "direct",
-          "download_kbps": 44.927934585537784
+          "download_kbps": 43.710321171577576
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 234.8,
-      "median_total_ms": 235.1,
-      "median_download_kbps": 30.9,
+      "median_response_ms": 201.6,
+      "median_total_ms": 202.0,
+      "median_download_kbps": 33.0,
       "status": "正常"
     },
     {
       "group": "catalog",
-      "url": "https://cj.lziapi.com/api.php/provide/vod/?ac=list",
+      "url": "https://suoniapi.com/api.php/provide/vod/at/xml/?ac=list",
       "names": [
-        "影视 • 量子[直连]"
+        "影视 • 索尼[直连]"
       ],
       "profiles": [
         "jsm",
@@ -779,32 +659,112 @@
       ],
       "attempts": [
         {
-          "url": "https://cj.lziapi.com/api.php/provide/vod/?ac=list",
+          "url": "https://suoniapi.com/api.php/provide/vod/at/xml/?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 342.90700000000004,
-          "time_total_ms": 343.10699999999997,
-          "download_bytes": 13340,
+          "time_starttransfer_ms": 343.979,
+          "time_total_ms": 344.19100000000003,
+          "download_bytes": 5663,
           "connection_mode": "direct",
-          "download_kbps": 37.9687495446027
+          "download_kbps": 16.067455097605688
         },
         {
-          "url": "https://cj.lziapi.com/api.php/provide/vod/?ac=list",
+          "url": "https://suoniapi.com/api.php/provide/vod/at/xml/?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 300.27,
-          "time_total_ms": 304.666,
-          "download_bytes": 13340,
+          "time_starttransfer_ms": 121.321,
+          "time_total_ms": 121.382,
+          "download_bytes": 5663,
           "connection_mode": "direct",
-          "download_kbps": 42.759427537040565
+          "download_kbps": 45.56090225486481
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 321.6,
-      "median_total_ms": 323.9,
-      "median_download_kbps": 40.4,
+      "median_response_ms": 232.6,
+      "median_total_ms": 232.8,
+      "median_download_kbps": 30.8,
+      "status": "正常"
+    },
+    {
+      "group": "catalog",
+      "url": "https://api.ukuapi.com/api.php/provide/vod/?ac=list",
+      "names": [
+        "影视 • 尤酷[直连]"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://api.ukuapi.com/api.php/provide/vod/?ac=list",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 453.135,
+          "time_total_ms": 453.335,
+          "download_bytes": 5994,
+          "connection_mode": "direct",
+          "download_kbps": 12.912119348825923
+        },
+        {
+          "url": "https://api.ukuapi.com/api.php/provide/vod/?ac=list",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 148.53900000000002,
+          "time_total_ms": 148.76500000000001,
+          "download_bytes": 5994,
+          "connection_mode": "direct",
+          "download_kbps": 39.34739774140422
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 300.8,
+      "median_total_ms": 301.1,
+      "median_download_kbps": 26.1,
+      "status": "正常"
+    },
+    {
+      "group": "catalog",
+      "url": "http://ffzy.tv/api.php/provide/vod/?ac=list",
+      "names": [
+        "影视 • 非凡[直连]"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "http://ffzy.tv/api.php/provide/vod/?ac=list",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 137.762,
+          "time_total_ms": 138.125,
+          "download_bytes": 5943,
+          "connection_mode": "direct",
+          "download_kbps": 42.01781674208145
+        },
+        {
+          "url": "http://ffzy.tv/api.php/provide/vod/?ac=list",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 588.812,
+          "time_total_ms": 588.967,
+          "download_bytes": 5943,
+          "connection_mode": "direct",
+          "download_kbps": 9.854051139537528
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 363.3,
+      "median_total_ms": 363.5,
+      "median_download_kbps": 25.9,
       "status": "正常"
     },
     {
@@ -822,29 +782,69 @@
           "url": "http://154.219.117.232:9981/jacloudapi.php/provide/vod?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 323.11,
-          "time_total_ms": 325.41700000000003,
-          "download_bytes": 5490,
+          "time_starttransfer_ms": 462.16400000000004,
+          "time_total_ms": 464.729,
+          "download_bytes": 5260,
           "connection_mode": "direct",
-          "download_kbps": 16.475255211006186
+          "download_kbps": 11.053148716779026
         },
         {
           "url": "http://154.219.117.232:9981/jacloudapi.php/provide/vod?ac=list",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 322.90999999999997,
-          "time_total_ms": 325.278,
-          "download_bytes": 5490,
+          "time_starttransfer_ms": 472.068,
+          "time_total_ms": 474.234,
+          "download_bytes": 5260,
           "connection_mode": "direct",
-          "download_kbps": 16.482295528747716
+          "download_kbps": 10.831612136624535
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 323.0,
-      "median_total_ms": 325.3,
-      "median_download_kbps": 16.5,
+      "median_response_ms": 467.1,
+      "median_total_ms": 469.5,
+      "median_download_kbps": 10.9,
+      "status": "正常"
+    },
+    {
+      "group": "catalog",
+      "url": "https://cj.lziapi.com/api.php/provide/vod/?ac=list",
+      "names": [
+        "影视 • 量子[直连]"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://cj.lziapi.com/api.php/provide/vod/?ac=list",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 593.552,
+          "time_total_ms": 593.777,
+          "download_bytes": 15249,
+          "connection_mode": "direct",
+          "download_kbps": 25.079451650198642
+        },
+        {
+          "url": "https://cj.lziapi.com/api.php/provide/vod/?ac=list",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 573.76,
+          "time_total_ms": 573.879,
+          "download_bytes": 15249,
+          "connection_mode": "direct",
+          "download_kbps": 25.949026820113648
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 583.7,
+      "median_total_ms": 583.8,
+      "median_download_kbps": 25.5,
       "status": "正常"
     },
     {
@@ -1011,29 +1011,29 @@
           "url": "https://xunlei8.me",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 244.352,
-          "time_total_ms": 245.261,
+          "time_starttransfer_ms": 347.16700000000003,
+          "time_total_ms": 347.51300000000003,
           "download_bytes": 29049,
           "connection_mode": "direct",
-          "download_kbps": 115.66520589290592
+          "download_kbps": 81.63195063925666
         },
         {
           "url": "https://xunlei8.me",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 374.19,
-          "time_total_ms": 374.81399999999996,
+          "time_starttransfer_ms": 516.334,
+          "time_total_ms": 516.498,
           "download_bytes": 29049,
           "connection_mode": "direct",
-          "download_kbps": 75.6859777449615
+          "download_kbps": 54.92405403796336
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 309.3,
-      "median_total_ms": 310.0,
-      "median_download_kbps": 95.7,
+      "median_response_ms": 431.8,
+      "median_total_ms": 432.0,
+      "median_download_kbps": 68.3,
       "status": "正常"
     },
     {
@@ -1051,29 +1051,29 @@
           "url": "https://cz01.vip",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 346.437,
-          "time_total_ms": 346.501,
+          "time_starttransfer_ms": 659.862,
+          "time_total_ms": 659.938,
           "download_bytes": 2355,
           "connection_mode": "direct",
-          "download_kbps": 6.637223810320894
+          "download_kbps": 3.4848799243262243
         },
         {
           "url": "https://cz01.vip",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 316.372,
-          "time_total_ms": 316.479,
+          "time_starttransfer_ms": 477.056,
+          "time_total_ms": 477.134,
           "download_bytes": 2355,
           "connection_mode": "direct",
-          "download_kbps": 7.266847681836709
+          "download_kbps": 4.820039417647872
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 331.4,
-      "median_total_ms": 331.5,
-      "median_download_kbps": 7.0,
+      "median_response_ms": 568.5,
+      "median_total_ms": 568.5,
+      "median_download_kbps": 4.2,
       "status": "正常"
     },
     {
@@ -1091,189 +1091,29 @@
           "url": "https://www.xb6v.com",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 765.7429999999999,
-          "time_total_ms": 1239.217,
+          "time_starttransfer_ms": 833.1610000000001,
+          "time_total_ms": 1302.3519999999999,
           "download_bytes": 51789,
           "connection_mode": "direct",
-          "download_kbps": 40.81221877403231
+          "download_kbps": 38.83373720200069
         },
         {
           "url": "https://www.xb6v.com",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 802.807,
-          "time_total_ms": 1260.162,
+          "time_starttransfer_ms": 847.086,
+          "time_total_ms": 1330.651,
           "download_bytes": 51789,
           "connection_mode": "direct",
-          "download_kbps": 40.133883828031635
+          "download_kbps": 38.00785879430444
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 784.3,
-      "median_total_ms": 1249.7,
-      "median_download_kbps": 40.5,
-      "status": "正常"
-    },
-    {
-      "group": "entry",
-      "url": "https://y2s52n7.com",
-      "names": [
-        "金牌 • 影视"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://y2s52n7.com",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 2182.4,
-          "time_total_ms": 3123.7200000000003,
-          "download_bytes": 872774,
-          "connection_mode": "direct",
-          "download_kbps": 272.85363584924386
-        },
-        {
-          "url": "https://y2s52n7.com",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 2861.993,
-          "time_total_ms": 3789.473,
-          "download_bytes": 873005,
-          "connection_mode": "direct",
-          "download_kbps": 224.97691507829717
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 2522.2,
-      "median_total_ms": 3456.6,
-      "median_download_kbps": 248.9,
-      "status": "正常"
-    },
-    {
-      "group": "entry",
-      "url": "https://m.jiabaide.cn",
-      "names": [
-        "金牌 • 影视"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://m.jiabaide.cn",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 4842.353,
-          "time_total_ms": 6399.565,
-          "download_bytes": 873176,
-          "connection_mode": "direct",
-          "download_kbps": 133.2451404900177
-        },
-        {
-          "url": "https://m.jiabaide.cn",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 2128.046,
-          "time_total_ms": 3577.364,
-          "download_bytes": 872906,
-          "connection_mode": "direct",
-          "download_kbps": 238.2892167598824
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 3485.2,
-      "median_total_ms": 4988.5,
-      "median_download_kbps": 185.8,
-      "status": "正常"
-    },
-    {
-      "group": "entry",
-      "url": "https://m.hkybqufgh.com",
-      "names": [
-        "金牌 • 影视"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://m.hkybqufgh.com",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 4619.705,
-          "time_total_ms": 6725.666,
-          "download_bytes": 872369,
-          "connection_mode": "direct",
-          "download_kbps": 126.66743361363766
-        },
-        {
-          "url": "https://m.hkybqufgh.com",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 2443.6710000000003,
-          "time_total_ms": 7602.669,
-          "download_bytes": 872489,
-          "connection_mode": "direct",
-          "download_kbps": 112.07117382888825
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 3531.7,
-      "median_total_ms": 7164.2,
-      "median_download_kbps": 119.4,
-      "status": "正常"
-    },
-    {
-      "group": "entry",
-      "url": "https://m.sizhengxt.com",
-      "names": [
-        "金牌 • 影视"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://m.sizhengxt.com",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 3536.849,
-          "time_total_ms": 5086.509,
-          "download_bytes": 872745,
-          "connection_mode": "direct",
-          "download_kbps": 167.5589366031791
-        },
-        {
-          "url": "https://m.sizhengxt.com",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 3658.846,
-          "time_total_ms": 4822.78,
-          "download_bytes": 872660,
-          "connection_mode": "direct",
-          "download_kbps": 176.70452130306586
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 3597.8,
-      "median_total_ms": 4954.6,
-      "median_download_kbps": 172.1,
+      "median_response_ms": 840.1,
+      "median_total_ms": 1316.5,
+      "median_download_kbps": 38.4,
       "status": "正常"
     },
     {
@@ -1291,29 +1131,149 @@
           "url": "https://vip.wwgz.cn:5200",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 4289.065,
-          "time_total_ms": 4289.147,
+          "time_starttransfer_ms": 3382.919,
+          "time_total_ms": 3383.008,
           "download_bytes": 435,
           "connection_mode": "direct",
-          "download_kbps": 0.0990417645979492
+          "download_kbps": 0.12557011023917178
         },
         {
           "url": "https://vip.wwgz.cn:5200",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 3394.419,
-          "time_total_ms": 3394.5080000000003,
+          "time_starttransfer_ms": 1355.9959999999999,
+          "time_total_ms": 1356.0829999999999,
           "download_bytes": 435,
           "connection_mode": "direct",
-          "download_kbps": 0.1251447006458668
+          "download_kbps": 0.3132586187571115
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 3841.7,
-      "median_total_ms": 3841.8,
-      "median_download_kbps": 0.1,
+      "median_response_ms": 2369.5,
+      "median_total_ms": 2369.5,
+      "median_download_kbps": 0.2,
+      "status": "正常"
+    },
+    {
+      "group": "entry",
+      "url": "https://y2s52n7.com",
+      "names": [
+        "金牌 • 影视"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://y2s52n7.com",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 2553.422,
+          "time_total_ms": 3860.902,
+          "download_bytes": 879014,
+          "connection_mode": "direct",
+          "download_kbps": 222.3346019595939
+        },
+        {
+          "url": "https://y2s52n7.com",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 3183.462,
+          "time_total_ms": 4503.594,
+          "download_bytes": 879081,
+          "connection_mode": "direct",
+          "download_kbps": 190.62054418371196
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 2868.4,
+      "median_total_ms": 4182.2,
+      "median_download_kbps": 206.5,
+      "status": "正常"
+    },
+    {
+      "group": "entry",
+      "url": "https://m.jiabaide.cn",
+      "names": [
+        "金牌 • 影视"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://m.jiabaide.cn",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 3508.5890000000004,
+          "time_total_ms": 4861.813,
+          "download_bytes": 878937,
+          "connection_mode": "direct",
+          "download_kbps": 176.54667385654284
+        },
+        {
+          "url": "https://m.jiabaide.cn",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 3154.324,
+          "time_total_ms": 4297.778,
+          "download_bytes": 878803,
+          "connection_mode": "direct",
+          "download_kbps": 199.68598999005997
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 3331.5,
+      "median_total_ms": 4579.8,
+      "median_download_kbps": 188.1,
+      "status": "正常"
+    },
+    {
+      "group": "entry",
+      "url": "https://m.sizhengxt.com",
+      "names": [
+        "金牌 • 影视"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://m.sizhengxt.com",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 4726.129,
+          "time_total_ms": 5928.236,
+          "download_bytes": 878846,
+          "connection_mode": "direct",
+          "download_kbps": 144.77292180591326
+        },
+        {
+          "url": "https://m.sizhengxt.com",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 4608.6140000000005,
+          "time_total_ms": 5758.93,
+          "download_bytes": 878803,
+          "connection_mode": "direct",
+          "download_kbps": 149.0217895837421
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 4667.4,
+      "median_total_ms": 5843.6,
+      "median_download_kbps": 146.9,
       "status": "正常"
     },
     {
@@ -1331,30 +1291,60 @@
           "url": "https://m.9zhoukj.com",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 4472.01,
-          "time_total_ms": 5421.805,
-          "download_bytes": 872902,
+          "time_starttransfer_ms": 4827.447,
+          "time_total_ms": 6044.629,
+          "download_bytes": 878835,
           "connection_mode": "direct",
-          "download_kbps": 157.22501258805877
+          "download_kbps": 141.98345418511212
         },
         {
           "url": "https://m.9zhoukj.com",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 3599.402,
-          "time_total_ms": 4594.385,
-          "download_bytes": 873019,
+          "time_starttransfer_ms": 4586.681,
+          "time_total_ms": 6000.14,
+          "download_bytes": 878806,
           "connection_mode": "direct",
-          "download_kbps": 185.5651229027389
+          "download_kbps": 143.03149332765568
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 4035.7,
-      "median_total_ms": 5008.1,
-      "median_download_kbps": 171.4,
+      "median_response_ms": 4707.1,
+      "median_total_ms": 6022.4,
+      "median_download_kbps": 142.5,
       "status": "正常"
+    },
+    {
+      "group": "entry",
+      "url": "https://m.hkybqufgh.com",
+      "names": [
+        "金牌 • 影视"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://m.hkybqufgh.com",
+          "reachable": false,
+          "error": "direct: curl: (28) Operation timed out after 6421 milliseconds with 276709 bytes received"
+        },
+        {
+          "url": "https://m.hkybqufgh.com",
+          "reachable": false,
+          "error": "direct: curl: (28) Operation timed out after 7503 milliseconds with 641774 bytes received"
+        }
+      ],
+      "successful_samples": 0,
+      "total_samples": 2,
+      "success_rate": 0.0,
+      "median_response_ms": null,
+      "median_total_ms": null,
+      "median_download_kbps": null,
+      "status": "无法读取"
     },
     {
       "group": "entry",
@@ -1418,161 +1408,41 @@
     },
     {
       "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/新闪雷.js",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/红果短剧.py",
       "names": [
-        "新闪雷 • MP4"
+        "红果 • 短剧"
       ],
       "profiles": [
-        "jsm"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/新闪雷.js",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 160.106,
-          "time_total_ms": 161.87,
-          "download_bytes": 2172,
-          "connection_mode": "direct",
-          "download_kbps": 13.10368660035831
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/新闪雷.js",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 102.529,
-          "time_total_ms": 102.62,
-          "download_bytes": 2172,
-          "connection_mode": "direct",
-          "download_kbps": 20.669399239914245
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 131.3,
-      "median_total_ms": 132.2,
-      "median_download_kbps": 16.9,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/360影视.js",
-      "names": [
-        "官源 • 360"
-      ],
-      "profiles": [
-        "jsm",
         "tvbox"
       ],
       "attempts": [
         {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/360影视.js",
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/红果短剧.py",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 181.454,
-          "time_total_ms": 182.498,
-          "download_bytes": 23845,
+          "time_starttransfer_ms": 125.917,
+          "time_total_ms": 132.873,
+          "download_bytes": 243366,
           "connection_mode": "direct",
-          "download_kbps": 127.59664660708611
+          "download_kbps": 1788.6411037231042
         },
         {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/360影视.js",
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/红果短剧.py",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 86.20899999999999,
-          "time_total_ms": 87.175,
-          "download_bytes": 23845,
+          "time_starttransfer_ms": 148.918,
+          "time_total_ms": 159.958,
+          "download_bytes": 243366,
           "connection_mode": "direct",
-          "download_kbps": 267.1193898766848
+          "download_kbps": 1485.7782003713476
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 133.8,
-      "median_total_ms": 134.8,
-      "median_download_kbps": 197.4,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/菜狗.js",
-      "names": [
-        "官源 • 搜狗"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/菜狗.js",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 194.482,
-          "time_total_ms": 195.032,
-          "download_bytes": 17612,
-          "connection_mode": "direct",
-          "download_kbps": 88.18665013946429
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/菜狗.js",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 75.615,
-          "time_total_ms": 75.92699999999999,
-          "download_bytes": 17612,
-          "connection_mode": "direct",
-          "download_kbps": 226.52309125870903
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 135.0,
-      "median_total_ms": 135.5,
-      "median_download_kbps": 157.4,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/Ncat.py",
-      "names": [
-        "网飞猫"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/Ncat.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 198.017,
-          "time_total_ms": 198.118,
-          "download_bytes": 12689,
-          "connection_mode": "direct",
-          "download_kbps": 62.54657104604327
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/Ncat.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 79.989,
-          "time_total_ms": 80.86500000000001,
-          "download_bytes": 12689,
-          "connection_mode": "direct",
-          "download_kbps": 153.23813222655042
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 139.0,
-      "median_total_ms": 139.5,
-      "median_download_kbps": 107.9,
+      "median_response_ms": 137.4,
+      "median_total_ms": 146.4,
+      "median_download_kbps": 1637.2,
       "status": "正常"
     },
     {
@@ -1590,29 +1460,69 @@
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/TVB云播.py",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 195.19,
-          "time_total_ms": 195.68,
+          "time_starttransfer_ms": 185.976,
+          "time_total_ms": 186.432,
           "download_bytes": 16997,
           "connection_mode": "direct",
-          "download_kbps": 84.82539254139411
+          "download_kbps": 89.03317462935549
         },
         {
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/TVB云播.py",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 88.298,
-          "time_total_ms": 88.75800000000001,
+          "time_starttransfer_ms": 101.148,
+          "time_total_ms": 101.622,
           "download_bytes": 16997,
           "connection_mode": "direct",
-          "download_kbps": 187.00999135289211
+          "download_kbps": 163.33700195331718
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 141.7,
-      "median_total_ms": 142.2,
-      "median_download_kbps": 135.9,
+      "median_response_ms": 143.6,
+      "median_total_ms": 144.0,
+      "median_download_kbps": 126.2,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/优酷.js",
+      "names": [
+        "官源 • 优酷"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/优酷.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 204.701,
+          "time_total_ms": 206.82,
+          "download_bytes": 73804,
+          "connection_mode": "direct",
+          "download_kbps": 348.48766439415914
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/优酷.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 85.466,
+          "time_total_ms": 86.84899999999999,
+          "download_bytes": 73804,
+          "connection_mode": "direct",
+          "download_kbps": 829.879661826849
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 145.1,
+      "median_total_ms": 146.8,
+      "median_download_kbps": 589.2,
       "status": "正常"
     },
     {
@@ -1630,69 +1540,29 @@
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/茶杯狐.js",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 232.045,
-          "time_total_ms": 232.136,
+          "time_starttransfer_ms": 195.852,
+          "time_total_ms": 196.066,
           "download_bytes": 3811,
           "connection_mode": "direct",
-          "download_kbps": 16.032324531740013
+          "download_kbps": 18.98176985045852
         },
         {
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/茶杯狐.js",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 77.731,
-          "time_total_ms": 77.795,
+          "time_starttransfer_ms": 105.256,
+          "time_total_ms": 105.322,
           "download_bytes": 3811,
           "connection_mode": "direct",
-          "download_kbps": 47.83957436210553
+          "download_kbps": 35.336204093161925
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 154.9,
-      "median_total_ms": 155.0,
-      "median_download_kbps": 31.9,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华谊影视.py",
-      "names": [
-        "华谊 • 影视"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华谊影视.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 143.593,
-          "time_total_ms": 144.65900000000002,
-          "download_bytes": 29646,
-          "connection_mode": "direct",
-          "download_kbps": 200.1339140668745
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华谊影视.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 180.98600000000002,
-          "time_total_ms": 182.165,
-          "download_bytes": 29646,
-          "connection_mode": "direct",
-          "download_kbps": 158.92828960008785
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 162.3,
-      "median_total_ms": 163.4,
-      "median_download_kbps": 179.5,
+      "median_response_ms": 150.6,
+      "median_total_ms": 150.7,
+      "median_download_kbps": 27.2,
       "status": "正常"
     },
     {
@@ -1710,36 +1580,36 @@
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/腾云驾雾.js",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 182.37900000000002,
-          "time_total_ms": 185.65499999999997,
+          "time_starttransfer_ms": 157.699,
+          "time_total_ms": 158.994,
           "download_bytes": 33154,
           "connection_mode": "direct",
-          "download_kbps": 174.39311155099514
+          "download_kbps": 203.6363203957382
         },
         {
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/腾云驾雾.js",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 158.163,
-          "time_total_ms": 159.12599999999998,
+          "time_starttransfer_ms": 155.629,
+          "time_total_ms": 160.199,
           "download_bytes": 33154,
           "connection_mode": "direct",
-          "download_kbps": 203.46739769113785
+          "download_kbps": 202.10458944812387
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 170.3,
-      "median_total_ms": 172.4,
-      "median_download_kbps": 188.9,
+      "median_response_ms": 156.7,
+      "median_total_ms": 159.6,
+      "median_download_kbps": 202.9,
       "status": "正常"
     },
     {
       "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/百忙无果.js",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华谊影视.py",
       "names": [
-        "官源 • 芒果"
+        "华谊 • 影视"
       ],
       "profiles": [
         "jsm",
@@ -1747,72 +1617,32 @@
       ],
       "attempts": [
         {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/百忙无果.js",
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华谊影视.py",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 180.87900000000002,
-          "time_total_ms": 181.127,
-          "download_bytes": 10871,
+          "time_starttransfer_ms": 256.261,
+          "time_total_ms": 256.496,
+          "download_bytes": 29646,
           "connection_mode": "direct",
-          "download_kbps": 58.61197357379076
+          "download_kbps": 112.87182597389433
         },
         {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/百忙无果.js",
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华谊影视.py",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 168.906,
-          "time_total_ms": 169.047,
-          "download_bytes": 10871,
+          "time_starttransfer_ms": 64.203,
+          "time_total_ms": 64.327,
+          "download_bytes": 29646,
           "connection_mode": "direct",
-          "download_kbps": 62.800351011848775
+          "download_kbps": 450.0625223467596
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 174.9,
-      "median_total_ms": 175.1,
-      "median_download_kbps": 60.7,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华数.py",
-      "names": [
-        "华数 • 影视"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华数.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 196.353,
-          "time_total_ms": 197.368,
-          "download_bytes": 27881,
-          "connection_mode": "direct",
-          "download_kbps": 137.95315888340562
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华数.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 153.4,
-          "time_total_ms": 156.048,
-          "download_bytes": 27881,
-          "connection_mode": "direct",
-          "download_kbps": 174.48182009702143
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 174.9,
-      "median_total_ms": 176.7,
-      "median_download_kbps": 156.2,
+      "median_response_ms": 160.2,
+      "median_total_ms": 160.4,
+      "median_download_kbps": 281.5,
       "status": "正常"
     },
     {
@@ -1830,29 +1660,389 @@
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/Didahd.py",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 232.259,
-          "time_total_ms": 232.472,
+          "time_starttransfer_ms": 221.797,
+          "time_total_ms": 222.531,
           "download_bytes": 11297,
           "connection_mode": "direct",
-          "download_kbps": 47.456151977442445
+          "download_kbps": 49.576133493760416
         },
         {
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/Didahd.py",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 119.842,
-          "time_total_ms": 120.06899999999999,
+          "time_starttransfer_ms": 102.143,
+          "time_total_ms": 104.253,
           "download_bytes": 11297,
           "connection_mode": "direct",
-          "download_kbps": 91.88238898050288
+          "download_kbps": 105.82166999990407
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 176.1,
-      "median_total_ms": 176.3,
-      "median_download_kbps": 69.7,
+      "median_response_ms": 162.0,
+      "median_total_ms": 163.4,
+      "median_download_kbps": 77.7,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/360影视.js",
+      "names": [
+        "官源 • 360"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/360影视.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 208.288,
+          "time_total_ms": 209.22899999999998,
+          "download_bytes": 23845,
+          "connection_mode": "direct",
+          "download_kbps": 111.29495821563933
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/360影视.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 120.04299999999999,
+          "time_total_ms": 121.43900000000001,
+          "download_bytes": 23845,
+          "connection_mode": "direct",
+          "download_kbps": 191.75168448768517
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 164.2,
+      "median_total_ms": 165.3,
+      "median_download_kbps": 151.5,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/Ncat.py",
+      "names": [
+        "网飞猫"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/Ncat.py",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 256.366,
+          "time_total_ms": 256.541,
+          "download_bytes": 12689,
+          "connection_mode": "direct",
+          "download_kbps": 48.302616589550986
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/Ncat.py",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 75.297,
+          "time_total_ms": 76.141,
+          "download_bytes": 12689,
+          "connection_mode": "direct",
+          "download_kbps": 162.74545333657295
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 165.8,
+      "median_total_ms": 166.3,
+      "median_download_kbps": 105.5,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/奇珍异兽.js",
+      "names": [
+        "官源 • 爱奇艺"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/奇珍异兽.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 238.728,
+          "time_total_ms": 238.947,
+          "download_bytes": 28088,
+          "connection_mode": "direct",
+          "download_kbps": 114.79402336082897
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/奇珍异兽.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 106.652,
+          "time_total_ms": 107.583,
+          "download_bytes": 28088,
+          "connection_mode": "direct",
+          "download_kbps": 254.96302854540215
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 172.7,
+      "median_total_ms": 173.3,
+      "median_download_kbps": 184.9,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华数.py",
+      "names": [
+        "华数 • 影视"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华数.py",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 267.629,
+          "time_total_ms": 268.406,
+          "download_bytes": 27881,
+          "connection_mode": "direct",
+          "download_kbps": 101.4416185275292
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/华数.py",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 98.691,
+          "time_total_ms": 98.935,
+          "download_bytes": 27881,
+          "connection_mode": "direct",
+          "download_kbps": 275.20633812604234
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 183.2,
+      "median_total_ms": 183.7,
+      "median_download_kbps": 188.3,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/百忙无果.js",
+      "names": [
+        "官源 • 芒果"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/百忙无果.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 250.011,
+          "time_total_ms": 250.071,
+          "download_bytes": 10871,
+          "connection_mode": "direct",
+          "download_kbps": 42.452787158447
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/百忙无果.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 129.466,
+          "time_total_ms": 130.273,
+          "download_bytes": 10871,
+          "connection_mode": "direct",
+          "download_kbps": 81.49202779931375
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 189.7,
+      "median_total_ms": 190.2,
+      "median_download_kbps": 62.0,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/菜狗.js",
+      "names": [
+        "官源 • 搜狗"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/菜狗.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 311.577,
+          "time_total_ms": 311.805,
+          "download_bytes": 17612,
+          "connection_mode": "direct",
+          "download_kbps": 55.160176231939836
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/菜狗.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 95.739,
+          "time_total_ms": 96.931,
+          "download_bytes": 17612,
+          "connection_mode": "direct",
+          "download_kbps": 177.43775211232733
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 203.7,
+      "median_total_ms": 204.4,
+      "median_download_kbps": 116.3,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/新闪雷.js",
+      "names": [
+        "新闪雷 • MP4"
+      ],
+      "profiles": [
+        "jsm"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/新闪雷.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 272.072,
+          "time_total_ms": 272.534,
+          "download_bytes": 2172,
+          "connection_mode": "direct",
+          "download_kbps": 7.782859202888447
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/新闪雷.js",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 144.073,
+          "time_total_ms": 144.183,
+          "download_bytes": 2172,
+          "connection_mode": "direct",
+          "download_kbps": 14.711122323713614
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 208.1,
+      "median_total_ms": 208.4,
+      "median_download_kbps": 11.2,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/ITalkBBTV.py",
+      "names": [
+        "ITalkBB • 外"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/ITalkBBTV.py",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 229.653,
+          "time_total_ms": 231.686,
+          "download_bytes": 10066,
+          "connection_mode": "direct",
+          "download_kbps": 42.42845111487099
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/ITalkBBTV.py",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 195.889,
+          "time_total_ms": 197.462,
+          "download_bytes": 10066,
+          "connection_mode": "direct",
+          "download_kbps": 49.78212580142002
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 212.8,
+      "median_total_ms": 214.6,
+      "median_download_kbps": 46.1,
+      "status": "正常"
+    },
+    {
+      "group": "resource",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py",
+      "names": [
+        "欧乐影院 • 外",
+        "欢迎来到蛋壳影院"
+      ],
+      "profiles": [
+        "jsm",
+        "tvbox"
+      ],
+      "attempts": [
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 211.32799999999997,
+          "time_total_ms": 211.401,
+          "download_bytes": 9453,
+          "connection_mode": "direct",
+          "download_kbps": 43.66793587778677
+        },
+        {
+          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py",
+          "http_code": 200,
+          "reachable": true,
+          "time_starttransfer_ms": 255.606,
+          "time_total_ms": 272.986,
+          "download_bytes": 9453,
+          "connection_mode": "direct",
+          "download_kbps": 33.8165521766684
+        }
+      ],
+      "successful_samples": 2,
+      "total_samples": 2,
+      "success_rate": 1.0,
+      "median_response_ms": 233.5,
+      "median_total_ms": 242.2,
+      "median_download_kbps": 38.7,
       "status": "正常"
     },
     {
@@ -1877,229 +2067,29 @@
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 229.28,
-          "time_total_ms": 239.741,
+          "time_starttransfer_ms": 303.947,
+          "time_total_ms": 310.738,
           "download_bytes": 111826,
           "connection_mode": "direct",
-          "download_kbps": 455.5127330118753
+          "download_kbps": 351.4377968738938
         },
         {
           "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/lib/drpy2.min.js",
           "http_code": 200,
           "reachable": true,
-          "time_starttransfer_ms": 127.64800000000001,
-          "time_total_ms": 139.328,
+          "time_starttransfer_ms": 166.432,
+          "time_total_ms": 173.383,
           "download_bytes": 111826,
           "connection_mode": "direct",
-          "download_kbps": 783.79850514613
+          "download_kbps": 629.8488209628395
         }
       ],
       "successful_samples": 2,
       "total_samples": 2,
       "success_rate": 1.0,
-      "median_response_ms": 178.5,
-      "median_total_ms": 189.5,
-      "median_download_kbps": 619.7,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py",
-      "names": [
-        "欧乐影院 • 外",
-        "欢迎来到蛋壳影院"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 179.934,
-          "time_total_ms": 180.117,
-          "download_bytes": 9453,
-          "connection_mode": "direct",
-          "download_kbps": 51.25249317110545
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/OleLive.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 183.511,
-          "time_total_ms": 183.715,
-          "download_bytes": 9453,
-          "connection_mode": "direct",
-          "download_kbps": 50.24872934980813
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 181.7,
-      "median_total_ms": 181.9,
-      "median_download_kbps": 50.8,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/奇珍异兽.js",
-      "names": [
-        "官源 • 爱奇艺"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/奇珍异兽.js",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 290.114,
-          "time_total_ms": 290.84,
-          "download_bytes": 28088,
-          "connection_mode": "direct",
-          "download_kbps": 94.31194986934398
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/奇珍异兽.js",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 85.12400000000001,
-          "time_total_ms": 86.299,
-          "download_bytes": 28088,
-          "connection_mode": "direct",
-          "download_kbps": 317.84478962676275
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 187.6,
-      "median_total_ms": 188.6,
-      "median_download_kbps": 206.1,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/优酷.js",
-      "names": [
-        "官源 • 优酷"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/优酷.js",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 272.11400000000003,
-          "time_total_ms": 280.432,
-          "download_bytes": 73804,
-          "connection_mode": "direct",
-          "download_kbps": 257.0113922448223
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/js/优酷.js",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 107.348,
-          "time_total_ms": 116.971,
-          "download_bytes": 73804,
-          "connection_mode": "direct",
-          "download_kbps": 616.1716899915364
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 189.7,
-      "median_total_ms": 198.7,
-      "median_download_kbps": 436.6,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/ITalkBBTV.py",
-      "names": [
-        "ITalkBB • 外"
-      ],
-      "profiles": [
-        "jsm",
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/ITalkBBTV.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 337.02700000000004,
-          "time_total_ms": 337.117,
-          "download_bytes": 10066,
-          "connection_mode": "direct",
-          "download_kbps": 29.159247753747216
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/ITalkBBTV.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 92.97,
-          "time_total_ms": 93.521,
-          "download_bytes": 10066,
-          "connection_mode": "direct",
-          "download_kbps": 105.11091760139433
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 215.0,
-      "median_total_ms": 215.3,
-      "median_download_kbps": 67.1,
-      "status": "正常"
-    },
-    {
-      "group": "resource",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/红果短剧.py",
-      "names": [
-        "红果 • 短剧"
-      ],
-      "profiles": [
-        "tvbox"
-      ],
-      "attempts": [
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/红果短剧.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 284.294,
-          "time_total_ms": 303.99199999999996,
-          "download_bytes": 243366,
-          "connection_mode": "direct",
-          "download_kbps": 781.8038283079818
-        },
-        {
-          "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/py/红果短剧.py",
-          "http_code": 200,
-          "reachable": true,
-          "time_starttransfer_ms": 147.9,
-          "time_total_ms": 170.971,
-          "download_bytes": 243366,
-          "connection_mode": "direct",
-          "download_kbps": 1390.072640243082
-        }
-      ],
-      "successful_samples": 2,
-      "total_samples": 2,
-      "success_rate": 1.0,
-      "median_response_ms": 216.1,
-      "median_total_ms": 237.5,
-      "median_download_kbps": 1085.9,
+      "median_response_ms": 235.2,
+      "median_total_ms": 242.1,
+      "median_download_kbps": 490.6,
       "status": "正常"
     }
   ],
