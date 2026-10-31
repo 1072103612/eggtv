@@ -1,6 +1,6 @@
 # 🥚 蛋壳影院 - 同步报告
 
-**同步时间**: 2026-10-30 22:19:22 UTC
+**同步时间**: 2026-10-31 05:40:22 UTC
 
 ---
 
@@ -8,7 +8,7 @@
 
 - **来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
-- **保留站点**: 61 个 ✅
+- **保留站点**: 62 个 ✅
 - **移除站点**: 93 个 🗑️
 
 **移除的站点** (共 93 个):
@@ -40,7 +40,7 @@
 
 - **来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
-- **保留站点**: 68 个 ✅
+- **保留站点**: 69 个 ✅
 - **移除站点**: 86 个 🗑️
 - **重命名**: 欧乐影院 • 外 → 欢迎来到蛋壳影院
 
