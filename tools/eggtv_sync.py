@@ -237,7 +237,8 @@ def deduplicate_sites(sites: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]]
 
 
 def filter_sites(sites: List[Dict[str, Any]], block_keywords: List[str],
-                 block_keys: Optional[List[str]] = None) -> Tuple[List[Dict[str, Any]], List[str]]:
+                 block_keys: Optional[List[str]] = None,
+                 keyword_exempt_keys: Optional[List[str]] = None) -> Tuple[List[Dict[str, Any]], List[str]]:
     """按站点名字过滤，命中关键字则删除，返回 (保留下来的, 被移除的)"""
     if not block_keywords and not block_keys:
         return sites, []
@@ -245,7 +246,9 @@ def filter_sites(sites: List[Dict[str, Any]], block_keywords: List[str],
     removed = []
     for site in sites:
         name = site.get("name", "")
-        blocked = site.get("key") in (block_keys or []) or any(kw.casefold() in name.casefold() for kw in block_keywords)
+        blocked = site.get("key") in (block_keys or []) or (
+            site.get("key") not in (keyword_exempt_keys or [])
+            and any(kw.casefold() in name.casefold() for kw in block_keywords))
         if blocked:
             removed.append(name)
             continue
@@ -683,6 +686,10 @@ def _sync_profile(
 
     # Use upstream directly as publish payload
     publish_payload = resolve_payload_references(copy.deepcopy(fetched_upstream), upstream_source)
+    first_key = profile_config.get("first_site_key")
+    follow_upstream_first = profile_config.get("first_site_from_upstream", False)
+    if follow_upstream_first:
+        first_key = publish_payload["sites"][0]["key"]
 
     # Track sync info for report
     sync_info = {
@@ -701,7 +708,8 @@ def _sync_profile(
         original_count = len(publish_payload["sites"])
         publish_payload["sites"], removed_names = filter_sites(
             publish_payload["sites"], block_keywords,
-            profile_config.get("filter", {}).get("block_keys", []))
+            profile_config.get("filter", {}).get("block_keys", []),
+            keyword_exempt_keys=[first_key] if follow_upstream_first else [])
         publish_payload["sites"], duplicate_names = deduplicate_sites(publish_payload["sites"])
         removed_names.extend(duplicate_names)
         removed_count = original_count - len(publish_payload["sites"])
@@ -744,7 +752,6 @@ def _sync_profile(
     sync_info["sites_kept"] = len(kept)
 
     # 先过滤再改名，避免欢迎语掩盖原站点类别。
-    first_key = profile_config.get("first_site_key")
     if first_key:
         preferred = next((site for site in publish_payload["sites"] if site["key"] == first_key), None)
         if preferred is None and any(site["key"] == first_key for site in health_removed):

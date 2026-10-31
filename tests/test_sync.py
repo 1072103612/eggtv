@@ -115,6 +115,30 @@ class SyncTests(unittest.TestCase):
         self.run_sync()
         self.assertEqual(sync.load_json(self.root / "config.json")["sites"], sites)
 
+    def test_welcome_follows_raw_upstream_first_despite_keyword_filter(self):
+        self.profile["first_site_from_upstream"] = True
+        self.profile["rename_first"] = "欢迎来到蛋壳影院"
+        self.profile["filter"] = {"block_keywords": ["搜索"], "block_keys": ["blocked"]}
+        original = payload()
+        original["sites"] = [
+            {"key": "douban", "name": "搜索 • 豆瓣", "api": "csp_Demo"},
+            {"key": "other_search", "name": "搜索 • 其他", "api": "csp_Demo"},
+            {"key": "OleLive", "name": "欧乐影院", "api": "csp_Demo"}]
+        for key in ("douban", "replacement"):
+            original["sites"][0]["key"] = key
+            self.responses["/source/config.json"] = json.dumps(original).encode()
+            self.run_sync()
+            sites = sync.load_json(self.root / "config.json")["sites"]
+            self.assertEqual(sites[0]["key"], key)
+            self.assertEqual(sites[0]["name"], "欢迎来到蛋壳影院")
+            self.assertEqual([site["key"] for site in sites], [key, "OleLive"])
+        original["sites"][0]["key"] = "blocked"
+        self.responses["/source/config.json"] = json.dumps(original).encode()
+        before = self.snapshots()
+        with self.assertRaises(sync.SyncError):
+            self.run_sync()
+        self.assertEqual(self.snapshots(), before)
+
     def test_jar_must_be_complete_and_match_sites(self):
         self.assertFalse(sync.is_valid_jar_bytes(b"PK\x03\x04broken"))
         self.assertFalse(sync.is_valid_jar_bytes(b"<html>success</html>"))
