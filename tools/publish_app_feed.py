@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Publish a separate app feed from eggtv's already-cleaned configuration."""
 import argparse
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -56,6 +57,8 @@ def publish(root, output, assets=None):
     filename = f'jar/{sha}.jar'
     config['spider'] = f'{PROXY}/{filename};md5;{md5}'
     config['eggSpiderSha256'] = sha
+    report = root / 'sync_report.json'
+    config['eggRevision'] = int(datetime.fromisoformat(json.loads(report.read_text())['sync_time']).timestamp() * 1000) if report.is_file() else 0
     config['sites'][0]['name'] = WELCOME
     config.pop('lives', None)
     config.pop('logo', None)
@@ -63,6 +66,9 @@ def publish(root, output, assets=None):
     # Dependencies first, then the configuration that points to them.
     atomic_write(output / filename, binary)
     atomic_write(output / 'tvbox_config.json', payload)
+    update = output / 'updates/leanback.json'
+    if not update.exists():
+        atomic_write(update, (json.dumps({'name': '1.0.0', 'code': 1, 'desc': '蛋壳影院电视版', 'apks': {}}, ensure_ascii=False, indent=2) + '\n').encode())
     if assets is not None:
         atomic_write(assets / 'spider.jar', binary)
         atomic_write(assets / 'config.json', payload)

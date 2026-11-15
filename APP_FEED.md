@@ -30,4 +30,8 @@ python3 tools/publish_app_feed.py --apk-assets /path/to/TV/app/src/main/assets/e
 python3 -m unittest discover -s tests -v
 ```
 
-本轮 52 项检查通过，包含原同步保护和新发布器的输出隔离、快照一致性、损坏 JAR 保留上一版、非法片源及无 DEX 拦截。
+本轮 54 项检查通过，包含原同步保护和新发布器的输出隔离、快照一致性、损坏 JAR 保留上一版、非法片源及无 DEX 拦截。
+
+## APP 自身升级
+
+`app/updates/leanback.json` 为独立版本清单。发布器首次生成 `code: 1`，后续同步不覆盖它。正式发布新版本时更新版本号和两种 ARM APK 的 `url`、`sha256`、`size`；客户端只安装包名、版本、校验值及签名都符合的更新包。普通电视仍需确认安装。

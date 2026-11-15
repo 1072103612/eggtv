@@ -59,6 +59,20 @@ class AppFeedTest(unittest.TestCase):
         self.assertEqual([site['key'] for site in result['sites']], ['home', 'film'])
         self.assertEqual(len(json.loads((self.root / 'tvbox_config.json').read_text())['sites']), 4)
 
+    def test_revision_tracks_source_sync_instead_of_mirror_cache_time(self):
+        (self.root / 'sync_report.json').write_text(json.dumps({'sync_time': '2026-11-15T06:31:00+00:00'}))
+        feed.publish(self.root, self.root / 'app')
+        result = json.loads((self.root / 'app/tvbox_config.json').read_text())
+        self.assertEqual(result['eggRevision'], 1794724260000)
+
+    def test_sync_does_not_reset_the_app_release_manifest(self):
+        feed.publish(self.root, self.root / 'app')
+        manifest = self.root / 'app/updates/leanback.json'
+        manifest.write_text(json.dumps({'name': '1.1.0', 'code': 2, 'apks': {}}))
+        previous = manifest.read_bytes()
+        feed.publish(self.root, self.root / 'app')
+        self.assertEqual(previous, manifest.read_bytes())
+
     def test_invalid_catalogue_not_published(self):
         for sites in [[], [{'name': 'bad'}], [self.config['sites'][0]] * 2]:
             with self.subTest(sites=sites):
