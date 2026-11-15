@@ -50,6 +50,15 @@ class AppFeedTest(unittest.TestCase):
             feed.publish(self.root, self.root / 'app')
         self.assertEqual(previous, (self.root / 'app/tvbox_config.json').read_bytes())
 
+    def test_only_app_feed_excludes_sources_requiring_extra_plugins(self):
+        self.config['sites'] += [{'key': 'python', 'api': 'https://example.org/spider.py'},
+                                 {'key': 'node', 'api': 'node:https://example.org/config.js'}]
+        self.save()
+        feed.publish(self.root, self.root / 'app')
+        result = json.loads((self.root / 'app/tvbox_config.json').read_text())
+        self.assertEqual([site['key'] for site in result['sites']], ['home', 'film'])
+        self.assertEqual(len(json.loads((self.root / 'tvbox_config.json').read_text())['sites']), 4)
+
     def test_invalid_catalogue_not_published(self):
         for sites in [[], [{'name': 'bad'}], [self.config['sites'][0]] * 2]:
             with self.subTest(sites=sites):

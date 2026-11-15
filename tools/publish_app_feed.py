@@ -31,6 +31,11 @@ def publish(root, output, assets=None):
     config = json.loads((root / 'tvbox_config.json').read_text())
     if not config.get('sites') or any(not x.get('key') or not x.get('api') for x in config['sites']):
         raise ValueError('Refusing to publish an empty or invalid catalogue')
+    # Keep this APK self-contained: it bundles Java/JAR and QuickJS, not Python/Node.
+    config['sites'] = [site for site in config['sites']
+                       if '.py' not in str(site['api']) and not str(site['api']).startswith('node:')]
+    if not config['sites']:
+        raise ValueError('No sources compatible with the bundled runtimes')
     keys = [x['key'] for x in config['sites']]
     if len(keys) != len(set(keys)):
         raise ValueError('Duplicate source keys')

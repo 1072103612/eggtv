@@ -4,7 +4,7 @@ APP 单独使用 `app/tvbox_config.json`，原 `tvbox_config.json`、副配置�
 
 ## 生成与同步
 
-`python3 tools/publish_app_feed.py` 读取已经过 eggtv 清洗及健康规则处理的主配置，只改默认入口名为“欢迎来到蛋壳影院🎞️”，不增加或恢复片源。发布配置使用内容哈希命名的独立 JAR，依赖先写入，再原子替换配置。JAR 不存在、校验不符、没有 DEX 或片源列表异常时，保留上一次可用输出。
+`python3 tools/publish_app_feed.py` 读取已经过 eggtv 清洗及健康规则处理的主配置，只改默认入口名为“欢迎来到蛋壳影院🎞️”，不增加或恢复片源。为满足第一版安装即用，APP 专用菜单另行排除需要额外安装 Python／Node 引擎的入口；本轮排除 8 个 Python 入口，保留 67 个。原门店菜单不受影响。发布配置使用内容哈希命名的独立 JAR，依赖先写入，再原子替换配置。JAR 不存在、校验不符、没有 DEX 或片源列表异常时，保留上一次可用输出。
 
 新增的 `Publish Eggshell App Feed` 工作流在原 `Sync Sources` 成功后运行，也可以手动触发，只提交 `app/` 文件。它没有更换现有上游或旧订阅线路。
 
@@ -30,4 +30,4 @@ python3 tools/publish_app_feed.py --apk-assets /path/to/TV/app/src/main/assets/e
 python3 -m unittest discover -s tests -v
 ```
 
-本轮 51 项检查通过，包含原同步保护和新发布器的输出隔离、快照一致性、损坏 JAR 保留上一版、非法片源及无 DEX 拦截。
+本轮 52 项检查通过，包含原同步保护和新发布器的输出隔离、快照一致性、损坏 JAR 保留上一版、非法片源及无 DEX 拦截。
