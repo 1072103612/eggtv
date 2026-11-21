@@ -1,0 +1,22 @@
+name: Check APP control
+
+on:
+  pull_request:
+    paths: [app_control.json, tools/eggtv_control.py, tests/test_control.py, .github/workflows/check-app-control.yml]
+  push:
+    branches: [main]
+    paths: [app_control.json, tvbox_config.json, tools/eggtv_control.py, tests/test_control.py, .github/workflows/check-app-control.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python3 tools/eggtv_control.py check
+      - run: python3 -m unittest discover -s tests -p test_control.py -v
