@@ -119,6 +119,13 @@ def recommendations(results, profile_names):
     return best
 
 
+def critical_failures(results, primary_urls):
+    return [row for row in results
+            if (row["group"] in {"tool", "resource"}
+                or (row["group"] == "config" and row["url"] in primary_urls))
+            and row["status"] != "正常"]
+
+
 def render_html(report):
     escape = html.escape
     labels = report.get("profile_labels", {})
@@ -140,6 +147,24 @@ def render_html(report):
                    for name, url in report["recommended_config_urls"].items()) or "<li>此次没有全部测量成功的配置线路，请稍后重测。</li>"
     skipped = "".join(f'<li>{escape(labels.get(item["profile"], item["profile"]))} · {escape(item["name"])}</li>' for item in report["unmeasured_sites"])
     clock = datetime.fromisoformat(report["measured_at"]).astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M")
+    critical = report.get("critical_failures", [])
+    critical_status = ('<p class="bad"><strong>关键配置或配套文件检查失败，不能视为发布正常。</strong></p>'
+                       if critical else '<p class="ok"><strong>原配置地址、播放工具及配套文件检查通过。</strong></p>')
+    search_rows = []
+    state_names = {"working": "测试片名有匹配结果", "unsupported": "接口明确不支持搜索",
+                   "ignores_keyword": "未按关键词搜索", "unavailable": "此次无法验证，保留原搜索设置",
+                   "no_matches": "测试片名未匹配，保留原搜索设置", "upstream_disabled": "上游已关闭搜索"}
+    for profile, check in report.get("search_checks", {}).items():
+        for source in check.get("sources", []):
+            state = state_names.get(source["status"], source["status"])
+            if source.get("disabled_reason") and source["status"] not in {"unsupported", "ignores_keyword"}:
+                state += "；沿用上次确认的搜索暂停状态"
+            search_rows.append(f'<li>{escape(labels.get(profile, profile))} · {escape(source["name"])}：'
+                               f'{escape(state)}</li>')
+    search_section = ('<section class="card"><h2>实际搜索接口检查</h2><p>同步时使用两个不同片名查询；'
+                      '明确不支持搜索或重复返回相同无关列表的入口暂停参与聚合搜索，浏览入口保留。'
+                      '接口恢复后会自动恢复搜索；超时、网络失败和未匹配片名不作为删除依据。此检查不验证播放。</p><ul>'
+                      + ''.join(search_rows) + '</ul></section>') if search_rows else ''
     return f'''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>蛋壳影院 · 片源测速</title><style>
@@ -156,8 +181,10 @@ main{{max-width:1250px;margin:32px auto;padding:0 20px}}h1{{margin:0;font-size:3
 <section class="card"><div class="stats"><div><strong>{report['summary']['targets']}</strong>测量地址</div>
 <div class="ok"><strong>{report['summary']['normal']}</strong>全部成功</div><div class="warn"><strong>{report['summary']['intermittent']}</strong>偶发失败</div>
 <div class="bad"><strong>{report['summary']['failed']}</strong>无法读取</div></div>
+{critical_status}
 <p>这里测的是配置、接口和配套文件的响应。工具文件的下载速度也会显示。<strong>这些结果不能证明电影能播放，也不是电影缓冲速度。</strong></p>
 <p>{escape(report['network_note'])} 云端结果仅供参考，在影院网络测出的结果更贴近客人的体验。</p></section>
+{search_section}
 <section class="card"><h2>此次响应最快的配置线路</h2><p>从此次每次都成功的线路中选择，供切换地址时参考。</p><ul>{best}</ul></section>
 <section class="card"><h2>测速明细</h2><label for="filter">查找片源或地址</label><input id="filter" placeholder="输入名称或地址">
 <div class="table"><table><thead><tr><th>检查内容</th><th>名称与地址</th><th>状态</th><th>响应时间（中位数）</th><th>成功次数</th><th>工具下载速度</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div></section>
@@ -214,6 +241,14 @@ def run_speedtest(args):
             ms = f"{row['median_response_ms']:.0f}ms" if row["median_response_ms"] is not None else "—"
             print(f"[{len(results)}/{len(targets)}] {row['status']} · {ms} · {row['names'][0]}", flush=True)
     results.sort(key=lambda row: (list(GROUPS).index(row["group"]), ranking_key(row)))
+    primary_urls = {sync.compute_raw_base(root, config["repo"]).rstrip("/") + "/" +
+                    config["profiles"][name]["publish_output"] for name in names}
+    broken_critical = critical_failures(results, primary_urls)
+    search_checks = {}
+    for name in names:
+        search_path = root / f"search_health_{name}.json"
+        if search_path.is_file():
+            search_checks[name] = sync.load_json(search_path)
     report = {"version": 1, "measured_at": datetime.now(timezone.utc).isoformat(), "location": location,
               "profile_labels": {name: config["profiles"][name].get("description", name) for name in names},
               "samples": samples, "timeout_seconds": timeout, "elapsed_seconds": round(time.monotonic() - started, 1),
@@ -223,11 +258,16 @@ def run_speedtest(args):
                           "intermittent": sum(r["status"] == "偶发失败" for r in results),
                           "failed": sum(r["status"] == "无法读取" for r in results)},
               "recommended_config_urls": recommendations(results, names), "results": results,
-              "unmeasured_sites": skipped}
+              "unmeasured_sites": skipped, "search_checks": search_checks,
+              "critical_ok": not broken_critical,
+              "critical_failures": [{"group": row["group"], "url": row["url"], "names": row["names"]}
+                                    for row in broken_critical]}
     sync.save_json(root / "speed_report.json", report)
     html_path = root / "speed_report.html"
     temp = html_path.with_suffix(".html.tmp")
     temp.write_text(render_html(report), encoding="utf-8")
     temp.replace(html_path)
     print("测速完成：speed_report.html（可直接打开），speed_report.json（详细数据）", flush=True)
-    return 0
+    if broken_critical:
+        print(f"关键文件检查失败：{len(broken_critical)} 项；报告已保存，本次检查不通过。", flush=True)
+    return 1 if broken_critical else 0

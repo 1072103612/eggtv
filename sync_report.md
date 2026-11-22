@@ -1,6 +1,6 @@
 # 🥚 蛋壳影院 - 同步报告
 
-**同步时间**: 2026-11-22 09:07:24 UTC
+**同步时间**: 2026-11-22 12:05:49 UTC
 
 ---
 
@@ -10,6 +10,11 @@
 - **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **保留站点**: 66 个 ✅
 - **移除站点**: 96 个 🗑️
+- **搜索接口检查**: {'working': 6, 'unsupported': 3, 'unavailable': 4, 'ignores_keyword': 1}
+- **暂停参与聚合搜索（保留浏览）**: 影视 • 天涯 — unsupported
+- **暂停参与聚合搜索（保留浏览）**: 影视 • 索尼[直连] — unsupported
+- **暂停参与聚合搜索（保留浏览）**: 影视 • 建安 — ignores_keyword
+- **暂停参与聚合搜索（保留浏览）**: 影视 • 率率[直连] — unsupported
 
 **移除的站点** (共 96 个):
 - 搜索 • 豆瓣
@@ -42,6 +47,11 @@
 - **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **保留站点**: 74 个 ✅
 - **移除站点**: 88 个 🗑️
+- **搜索接口检查**: {'working': 7, 'unsupported': 3, 'unavailable': 4, 'ignores_keyword': 1}
+- **暂停参与聚合搜索（保留浏览）**: 影视 • 天涯 — unsupported
+- **暂停参与聚合搜索（保留浏览）**: 影视 • 索尼[直连] — unsupported
+- **暂停参与聚合搜索（保留浏览）**: 影视 • 建安 — ignores_keyword
+- **暂停参与聚合搜索（保留浏览）**: 影视 • 率率[直连] — unsupported
 - **重命名**: 搜索 • 豆瓣 → 欢迎来到蛋壳影院
 
 **移除的站点** (共 88 个):

@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import copy
 import hashlib
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -83,23 +85,22 @@ def build_fetch_attempts(network: Optional[Dict[str, Any]]) -> List[Tuple[str, O
     return [("proxy", proxy_url), ("direct", None)]
 
 
-def read_http_bytes(source: str, timeout: int = 30, network: Optional[Dict[str, Any]] = None) -> bytes:
+def read_http_bytes(source: str, timeout: int = 30, network: Optional[Dict[str, Any]] = None,
+                    retries: int = 2) -> bytes:
     errors = []
     for mode, proxy_url in build_fetch_attempts(network):
         cmd = [
             "curl", "-fsSL",
             "-A", "eggtv-sync/1.0 (+https://github.com/1072103612/eggtv)",
-            "--retry", "2", "--retry-delay", "2",
+            "--retry", str(retries), "--retry-delay", "2",
             "--connect-timeout", str(min(timeout, 20)),
             "--max-time", str(timeout),
         ]
         if proxy_url:
             cmd.extend(["--proxy", proxy_url])
-        else:
-            cmd.extend(["--noproxy", "*"])
         cmd.append(source)
         # curl --retry 2 最多 3 次尝试，加 buffer 防止 subprocess 僵死
-        process_timeout = timeout * 3 + 60
+        process_timeout = timeout * (retries + 1) + 60
         try:
             result = subprocess.run(cmd, capture_output=True, check=False, timeout=process_timeout)
         except subprocess.TimeoutExpired:
@@ -210,6 +211,21 @@ def resource_urls(payload: JsonValue) -> List[str]:
                    and urllib.parse.urlparse(value).path.lower().endswith((".js", ".py", ".json"))})
 
 
+def validate_resource_body(body: bytes, url: str) -> None:
+    head = body[:2048].decode("utf-8-sig", errors="replace").lstrip()
+    head = re.sub(r"(?s)^(?:<!--.*?-->\s*)+", "", head).lstrip().lower()
+    if not body.strip() or head.startswith(("<!doctype html", "<html")):
+        raise SyncError(f"配套文件返回空内容或错误网页: {url}")
+    path = urllib.parse.urlsplit(url).path.lower()
+    try:
+        if path.endswith(".json"):
+            json.loads(body)
+        elif path.endswith(".py"):
+            ast.parse(body)
+    except (ValueError, UnicodeError, SyntaxError) as exc:
+        raise SyncError(f"配套脚本或 JSON 内容无效: {url}") from exc
+
+
 def validate_relative_resources(original: Dict[str, Any], published: Dict[str, Any],
                                 source: str, network: Optional[Dict[str, Any]]) -> None:
     if not is_http_url(source):
@@ -318,7 +334,7 @@ def resolve_relative_reference(base_source: str, reference: str) -> str:
 def run_git(repo_root: Path, args: List[str]) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["git", "-C", str(repo_root), *args],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, check=False, timeout=120,
     )
 
 
@@ -443,16 +459,11 @@ def publish_pages_dependencies(repo_root: Path, repo_config: Dict[str, Any],
 
     def download(url):
         body = read_http_bytes(url, timeout=30, network=network)
-        head = body[:1024].decode("utf-8-sig", errors="replace").lstrip().lower()
-        if not body.strip() or head.startswith(("<!doctype html", "<html")):
-            raise SyncError(f"配套文件内容无效，保留旧配置: {url}")
-        if urllib.parse.urlsplit(url).path.lower().endswith(".json"):
-            try:
-                json.loads(body)
-            except (ValueError, UnicodeError) as exc:
-                raise SyncError(f"配套 JSON 无效: {url}") from exc
+        validate_resource_body(body, url)
         digest = hashlib.sha256(body).hexdigest()
         filename = urllib.parse.unquote(urllib.parse.urlsplit(url).path.rsplit("/", 1)[-1])
+        if filename in {"", ".", ".."} or "/" in filename or "\\" in filename:
+            raise SyncError(f"配套文件名称无效: {url}")
         relative = f"deps/{digest}/{filename}"
         target = ensure_relative_to_repo(repo_root, relative)
         return url, body, target, raw_base + "/" + urllib.parse.quote(relative, safe="/")
@@ -812,6 +823,41 @@ def _sync_profile(
     validate_source_payload(publish_payload)
     validate_relative_resources(fetched_upstream, publish_payload, upstream_source, network)
 
+    changed_files = []
+    search_options = repo_config.get("search_check", {})
+    if search_options.get("enabled"):
+        try:
+            from tools.eggtv_search import audit_search
+        except ModuleNotFoundError:
+            from eggtv_search import audit_search
+        search_timeout = clamp_timeout(int(search_options.get("timeout", 10)), max_val=30)
+        report_path = repo_root / f"search_health_{profile_name}.json"
+        previous_search = load_json(report_path) if report_path.is_file() else None
+        publish_payload["sites"], search_report = audit_search(
+            publish_payload["sites"], search_options,
+            lambda url: read_http_bytes(url, search_timeout, network, retries=0), previous=previous_search)
+        sync_info["search"] = {key: value for key, value in search_report.items() if key != "sources"}
+        search_report.update(version=1, profile=profile_name, checked_at=datetime.now(timezone.utc).isoformat())
+        if save_json(report_path, search_report, dry_run=dry_run):
+            changed_files.append(report_path)
+
+    spider_file = update_spider_field(
+        repo_root, repo_config, profile_config, publish_payload, upstream_source,
+        network=network, dry_run=dry_run)
+    if spider_file is not None:
+        changed_files.append(spider_file)
+    if repo_config.get("publish_dependency_transport") == "pages":
+        tool = ensure_relative_to_repo(repo_root, profile_config["spider"]["download_to"])
+        digest = md5_file(tool)
+        immutable = repo_root / "jar" / f"mirror-{digest}.jar"
+        if not immutable.exists() or md5_file(immutable) != digest:
+            immutable.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(tool, immutable)
+            changed_files.append(immutable)
+        publish_payload["spider"] = f"{compute_raw_base(repo_root, repo_config)}/jar/{immutable.name};md5;{digest}"
+        changed_files.extend(publish_pages_dependencies(repo_root, repo_config, publish_payload, network))
+
+    # Health signatures must use the same hosted URLs as the cinema's candidate config.
     # 先验证完整候选，再按影院网络实测结果过滤。
     health = {}
     health_file = repo_config.get("playback_health")
@@ -854,38 +900,9 @@ def _sync_profile(
         publish_payload["sites"][0]["name"] = rename_first
         sync_info["renamed"] = {"from": old_name, "to": rename_first}
 
-    changed_files = []
-
     # Save upstream snapshot
     if save_json(upstream_output, fetched_upstream, dry_run=dry_run):
         changed_files.append(upstream_output)
-
-    # Update spider and save publish
-    spider_file = update_spider_field(
-        repo_root,
-        repo_config,
-        profile_config,
-        publish_payload,
-        upstream_source,
-        network=network,
-        dry_run=dry_run,
-    )
-    if spider_file is not None:
-        changed_files.append(spider_file)
-
-    if repo_config.get("publish_dependency_transport") == "pages":
-        tool = ensure_relative_to_repo(repo_root, profile_config["spider"]["download_to"])
-        digest = md5_file(tool)
-        immutable = repo_root / "jar" / f"mirror-{digest}.jar"
-        if not immutable.exists() or md5_file(immutable) != digest:
-            immutable.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(tool, immutable)
-            changed_files.append(immutable)
-        publish_payload["spider"] = f"{compute_raw_base(repo_root, repo_config)}/jar/{immutable.name};md5;{digest}"
-        complete_candidates["spider"] = publish_payload["spider"]
-        combined = {"published": publish_payload, "candidates": complete_candidates}
-        changed_files.extend(publish_pages_dependencies(repo_root, repo_config, combined, network))
-        publish_payload, complete_candidates = combined["published"], combined["candidates"]
 
     if profile_config.get("candidates_output"):
         complete_candidates["spider"] = publish_payload.get("spider")
@@ -941,6 +958,8 @@ def stage_profile(repo_root: Path, repo_config: Dict[str, Any], profile_name: st
         if not is_http_url(staged_config["upstream_url"]):
             staged_config["upstream_url"] = str(Path(staged_config["upstream_url"]).resolve())
         seed_paths = [profile_config["publish_output"], profile_config["upstream_output"]]
+        if repo_config.get("search_check", {}).get("enabled"):
+            seed_paths.append(f"search_health_{profile_name}.json")
         if repo_config.get("playback_health"):
             seed_paths.append(repo_config["playback_health"])
         if profile_config.get("spider"):
@@ -1092,8 +1111,8 @@ def check_url_health(url: str, timeout: int, network: Optional[Dict[str, Any]],
                             raise SyncError("播放工具与菜单校验值不一致")
                         if expected_payload is not None and not jar_supports_sites(body, expected_payload):
                             raise SyncError("播放工具与站点不匹配")
-                    if kind == "resource" and body[:1024].decode("utf-8-sig", errors="replace").lstrip().lower().startswith(("<!doctype html", "<html")):
-                        raise SyncError("配套文件地址返回了网页")
+                    if kind == "resource":
+                        validate_resource_body(body, url)
                     if kind == "catalog":
                         validate_catalog(body)
                     return {"url": url, "http_code": int(parts[0]), "reachable": True,
@@ -1151,8 +1170,6 @@ def _check_url_attempt(url: str, timeout: int, proxy_url: Optional[str],
     ]
     if proxy_url:
         cmd.extend(["--proxy", proxy_url])
-    else:
-        cmd.extend(["--noproxy", "*"])
     cmd.append(url)
     try:
         return subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=timeout + 5)
@@ -1308,7 +1325,8 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
                                       "using_fallback": r.get("using_fallback", False),
                                       "error": r.get("error"),
                                       "configured_source": r.get("configured_source", r["source"]),
-                                      "source_attempts": r.get("source_attempts", [])})
+                                      "source_attempts": r.get("source_attempts", []),
+                                      "search": r.get("search")})
 
     # 生成 Markdown 报告
     md_lines = []
@@ -1339,6 +1357,12 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
             md_lines.append("- **状态**: 首选来源不完整，已使用整套候补来源")
         md_lines.append(f"- **保留站点**: {kept} 个 ✅")
         md_lines.append(f"- **移除站点**: {removed} 个 🗑️")
+
+        if r.get("search"):
+            checks = r["search"]
+            md_lines.append(f"- **搜索接口检查**: {checks['summary']}")
+            for entry in checks["disabled_search"]:
+                md_lines.append(f"- **暂停参与聚合搜索（保留浏览）**: {entry['name']} — {entry['reason']}")
 
         if renamed:
             md_lines.append(f"- **重命名**: {renamed['from']} → {renamed['to']}")
@@ -1477,7 +1501,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
     if failed_profiles:
         print("部分来源更新失败，原配置已保留: " + ", ".join(failed_profiles))
-    return 1 if len(failed_profiles) == len(target_profiles) else 0
+    return 1 if failed_profiles else 0
 
 
 def _show_file_diff(repo_root: Path, file_path: Path) -> None:
@@ -1508,9 +1532,14 @@ def git_commit_and_push(repo_root: Path, files: List[Path], commit_message: str)
     commit_result = run_git(repo_root, ["commit", "-m", commit_message])
     if commit_result.returncode != 0:
         raise SyncError(commit_result.stderr.strip() or "git commit failed")
-    push_result = run_git(repo_root, ["push", "origin", "HEAD"])
-    if push_result.returncode != 0:
-        raise SyncError(push_result.stderr.strip() or "git push failed")
+    try:
+        if __package__:
+            from .eggtv_publish import push_with_retry
+        else:
+            from eggtv_publish import push_with_retry
+        push_with_retry(repo_root, run=lambda args: run_git(repo_root, args))
+    except RuntimeError as exc:
+        raise SyncError(str(exc)) from exc
 
 
 # --- CLI ---

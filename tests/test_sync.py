@@ -332,6 +332,20 @@ class SyncTests(unittest.TestCase):
         with self.assertRaises(sync.SyncError):
             sync.validate_pages_dependencies(self.root, self.repo, {"api": "https://gh-proxy.com/file.js"})
 
+    def test_error_page_with_html_comment_and_invalid_python_are_not_valid_resources(self):
+        for body, url in [(b'<!-- edge -->\n<!DOCTYPE html><html>Denied</html>', 'https://example.test/a.js'),
+                          (b'Access to proxy rules is forbidden', 'https://example.test/a.py'),
+                          (b'not json', 'https://example.test/a.json')]:
+            with self.subTest(url=url), self.assertRaises(sync.SyncError):
+                sync.validate_resource_body(body, url)
+        sync.validate_resource_body(b'# normal Python\nvalue=1', 'https://example.test/a.py')
+
+    def test_dependency_filename_cannot_escape_content_directory(self):
+        data = {"sites": [{"api": "https://raw.githubusercontent.com/owner/repo/main/a%2fb.js"}]}
+        with patch.object(sync, "read_http_bytes", return_value=b'var rule={};'), self.assertRaises(sync.SyncError):
+            sync.publish_pages_dependencies(self.root, self.repo, data, self.network)
+        self.assertEqual(self.snapshots(), {})
+
     def test_pages_sync_keeps_immutable_tool_and_legacy_subscriptions(self):
         self.repo["publish_dependency_transport"] = "pages"
         self.run_sync()
@@ -342,6 +356,46 @@ class SyncTests(unittest.TestCase):
         sync.publish_dependency_transport(self.root, self.repo, {"main": self.profile})
         for suffix in ("cdn", "proxy"):
             self.assertEqual(sync.load_json(self.root / f"config_{suffix}.json"), published)
+
+    def test_hosted_script_health_matches_cinema_candidate_and_resets_on_content_change(self):
+        from tools.playback_policy import signature
+        script_url = "https://raw.githubusercontent.com/qist/tvbox/master/js/movie.js"
+        original = payload(script_url)
+        original["sites"].append({"key": "backup", "name": "健康电影", "type": 3, "api": "csp_Demo"})
+        self.responses["/source/config.json"] = json.dumps(original).encode()
+        self.repo.update(publish_dependency_transport="pages", playback_health="health.json")
+        self.profile["candidates_output"] = "candidates.json"
+        read = sync.read_http_bytes
+        script = [b"var rule={};"]
+
+        def fetch(url, *args, **kwargs):
+            return script[0] if url == script_url else read(url, *args, **kwargs)
+        with patch.object(sync, "read_http_bytes", side_effect=fetch):
+            self.run_sync()
+            candidate = sync.load_json(self.root / "candidates.json")["sites"][0]
+            sync.save_json(self.root / "health.json", {"version": 1, "profiles": {"main": {
+                "demo": {"status": "unhealthy", "signature": signature(candidate)}}}})
+            self.run_sync()
+            self.assertEqual([s["key"] for s in sync.load_json(self.root / "config.json")["sites"]], ["backup"])
+            self.assertEqual(len(sync.load_json(self.root / "candidates.json")["sites"]), 2)
+            script[0] = b"var rule={updated:true};"
+            self.run_sync()
+            self.assertEqual(len(sync.load_json(self.root / "config.json")["sites"]), 2)
+
+    def test_real_search_refusal_is_recorded_without_deleting_source(self):
+        from tools.eggtv_search import search_url
+        source = payload(self.base + "/catalog?token=keep")
+        source["sites"][0].update(type=1, searchable=1, quickSearch=1)
+        self.responses["/source/config.json"] = json.dumps(source).encode()
+        for keyword in ("流浪地球", "肖申克"):
+            self.responses[search_url(source["sites"][0]["api"], keyword).removeprefix(self.base)] = "暂不支持搜索".encode()
+        self.repo["search_check"] = {"enabled": True}
+        result = self.run_sync()
+        site = sync.load_json(self.root / "config.json")["sites"][0]
+        self.assertEqual(site["searchable"], 0)
+        self.assertEqual(site["api"], source["sites"][0]["api"])
+        self.assertEqual(result["search"]["summary"], {"unsupported": 1})
+        self.assertEqual(sync.load_json(self.root / "search_health_main.json")["sources"][0]["status"], "unsupported")
 
     def test_filter_before_branding_and_count_without_keywords(self):
         original = payload()
@@ -408,12 +462,21 @@ class SyncTests(unittest.TestCase):
         args = argparse.Namespace(repo_root=str(self.root), config="sync.json", all=True,
                                   profiles=[], upstream_url=None, push=False, dry_run=False,
                                   diff=False, no_proxy=True, proxy=None)
+        bad, good = copy.deepcopy(self.profile), copy.deepcopy(self.profile)
+        bad.update(upstream_url=self.base + "/source/bad.json", publish_output="bad.json",
+                   upstream_output="bad-upstream.json")
+        bad["spider"].update(download_to="jar/bad.jar", publish_path="jar/bad.jar")
+        good.update(publish_output="good.json")
+        good["spider"].update(download_to="jar/good.jar", publish_path="jar/good.jar")
+        self.responses["/source/bad.json"] = b"{}"
+        sync.save_json(self.root / "bad.json", payload())
+        previous = (self.root / "bad.json").read_bytes()
         sync.save_json(self.root / "sync.json", {"repo": self.repo,
-                      "profiles": {"bad": self.profile, "good": self.profile}})
-        good = {"profile": "good", "source": "test", "changed_files": [], "sites_kept": 1}
-        with patch.object(sync, "sync_profile", side_effect=[sync.SyncError("broken"), good]), \
-                contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(sync.cmd_sync(args), 0)
+                      "profiles": {"bad": bad, "good": good}})
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(sync.cmd_sync(args), 1)
+        self.assertEqual((self.root / "bad.json").read_bytes(), previous)
+        self.assertEqual(sync.load_json(self.root / "good.json")["sites"][0]["api"], "csp_Demo")
         report = sync.load_json(self.root / "sync_report.json")
         self.assertEqual(report["profiles"][0]["status"], "kept_previous")
         self.assertEqual(report["profiles"][1]["status"], "updated")

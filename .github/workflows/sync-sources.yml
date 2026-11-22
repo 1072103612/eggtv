@@ -7,7 +7,11 @@ on:
       - eggtv_sync.json
       - tools/eggtv_sync.py
       - tools/eggtv_speedtest.py
+      - tools/eggtv_search.py
+      - tools/eggtv_publish.py
+      - tools/verify_published.py
       - tools/playback_policy.py
+      - tests/**
       - .github/workflows/sync-sources.yml
   workflow_dispatch:
     inputs:
@@ -47,6 +51,8 @@ jobs:
         run: python3 -m unittest discover -s tests -v
 
       - name: Sync sources
+        id: sync
+        continue-on-error: true
         env:
           INPUT_PROFILE: ${{ inputs.profile }}
           INPUT_UPSTREAM_URL: ${{ inputs.upstream_url }}
@@ -62,18 +68,42 @@ jobs:
             python3 tools/eggtv_sync.py --no-proxy sync --all
           fi
 
-      - name: Measure source response speed
-        run: python3 tools/eggtv_sync.py --no-proxy speedtest --location "GitHub 云端（仅供参考）"
+      - name: Validate prepared configuration files
+        run: python3 tools/verify_published.py --local-only
 
       - name: Commit changes
         run: |
           set -eu
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          git commit -m "chore(sync): refresh sources"
-          git push
+          python3 tools/eggtv_publish.py
+
+      - name: Verify original subscriptions after publication
+        run: python3 tools/verify_published.py --timeout 300 --interval 10
+
+      - name: Measure published source response speed
+        id: speed
+        run: python3 tools/eggtv_sync.py --no-proxy speedtest --location "GitHub 云端（仅供参考）"
+
+      - name: Save response report
+        if: ${{ always() && (steps.speed.outcome == 'success' || steps.speed.outcome == 'failure') }}
+        run: |
+          python3 tools/eggtv_publish.py --message "chore(health): refresh published source checks"
+
+      - name: Report upstream synchronization failure
+        if: ${{ always() && steps.sync.outcome == 'failure' }}
+        run: |
+          echo "Some sources could not be updated; failed profiles kept their previous configuration. See sync_report.json and the publication steps for the status of successful profiles."
+          exit 1
+
+      - name: Retain diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-health-reports
+          path: |
+            sync_report.json
+            search_health_*.json
+            speed_report.json
+            publication_report.json
+          if-no-files-found: ignore

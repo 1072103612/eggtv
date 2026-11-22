@@ -1,5 +1,5 @@
 {
-  "sync_time": "2026-11-22T09:07:24.820246+00:00",
+  "sync_time": "2026-11-22T12:05:49.797297+00:00",
   "profiles": [
     {
       "name": "jsm",
@@ -106,7 +106,7 @@
       ],
       "renamed": null,
       "changed_files": [
-        "jsm_upstream.json",
+        "search_health_jsm.json",
         "jar/mirror-efdb2c1d9a2e8c26e5a74ba5f53dfc56.jar",
         "deps/20d4aff0157ef7ec3793b7e717dfcf0160b5b2f4fbc0c5c8767c81ebf3fdcdd7/360影视.js",
         "deps/05e8938bcf068b835795332e0e8e1171f4e4e6ff27021ecfdd874f8ec4cfb04e/优酷.js",
@@ -137,7 +137,37 @@
           "status": "selected",
           "error": null
         }
-      ]
+      ],
+      "search": {
+        "summary": {
+          "working": 6,
+          "unsupported": 3,
+          "unavailable": 4,
+          "ignores_keyword": 1
+        },
+        "disabled_search": [
+          {
+            "key": "天涯采集",
+            "name": "影视 • 天涯",
+            "reason": "unsupported"
+          },
+          {
+            "key": "索尼",
+            "name": "影视 • 索尼[直连]",
+            "reason": "unsupported"
+          },
+          {
+            "key": "建安采集",
+            "name": "影视 • 建安",
+            "reason": "ignores_keyword"
+          },
+          {
+            "key": "率率",
+            "name": "影视 • 率率[直连]",
+            "reason": "unsupported"
+          }
+        ]
+      }
     },
     {
       "name": "tvbox",
@@ -239,7 +269,7 @@
         "to": "欢迎来到蛋壳影院"
       },
       "changed_files": [
-        "tvbox_upstream.json",
+        "search_health_tvbox.json",
         "jar/mirror-efdb2c1d9a2e8c26e5a74ba5f53dfc56.jar",
         "deps/20d4aff0157ef7ec3793b7e717dfcf0160b5b2f4fbc0c5c8767c81ebf3fdcdd7/360影视.js",
         "deps/81884aa26afd32abbdc54843033758748894ea3ed2e32e110478012d5ae69e81/drpy.js",
@@ -271,7 +301,37 @@
           "status": "selected",
           "error": null
         }
-      ]
+      ],
+      "search": {
+        "summary": {
+          "working": 7,
+          "unsupported": 3,
+          "unavailable": 4,
+          "ignores_keyword": 1
+        },
+        "disabled_search": [
+          {
+            "key": "天涯采集",
+            "name": "影视 • 天涯",
+            "reason": "unsupported"
+          },
+          {
+            "key": "索尼",
+            "name": "影视 • 索尼[直连]",
+            "reason": "unsupported"
+          },
+          {
+            "key": "建安采集",
+            "name": "影视 • 建安",
+            "reason": "ignores_keyword"
+          },
+          {
+            "key": "率率",
+            "name": "影视 • 率率[直连]",
+            "reason": "unsupported"
+          }
+        ]
+      }
     }
   ]
 }

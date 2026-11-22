@@ -116,6 +116,25 @@ class SpeedTests(unittest.TestCase):
                 speed.run_speedtest(self.args(**updates))
         self.assertFalse((self.root / "speed_report.json").exists())
 
+    def test_broken_tool_is_failure_but_report_is_still_written(self):
+        def check(url, *args, **kwargs):
+            return {"reachable": False, "error": "403"} if url.endswith("tool.jar") else self.response(100)
+        with patch.object(sync, "check_url_health", side_effect=check), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(speed.run_speedtest(self.args()), 1)
+        report = sync.load_json(self.root / "speed_report.json")
+        self.assertFalse(report["critical_ok"])
+        self.assertEqual(report["critical_failures"][0]["group"], "tool")
+        self.assertIn("不能视为发布正常", (self.root / "speed_report.html").read_text())
+
+    def test_catalog_and_optional_mirror_failure_do_not_block_working_dependencies(self):
+        def check(url, *args, **kwargs):
+            if "mirror.test" in url or "ac=list" in url:
+                return {"reachable": False, "error": "timeout"}
+            return self.response(100)
+        with patch.object(sync, "check_url_health", side_effect=check), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(speed.run_speedtest(self.args()), 0)
+        self.assertTrue(sync.load_json(self.root / "speed_report.json")["critical_ok"])
+
 
 if __name__ == "__main__":
     unittest.main()
