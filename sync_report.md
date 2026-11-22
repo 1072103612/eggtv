@@ -1,6 +1,6 @@
 # 🥚 蛋壳影院 - 同步报告
 
-**同步时间**: 2026-11-22 19:39:51 UTC
+**同步时间**: 2026-11-22 21:02:34 UTC
 
 ---
 
@@ -49,8 +49,7 @@
 - **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **保留站点**: 75 个 ✅
 - **移除站点**: 88 个 🗑️
-- **通用首页校验**: 32 个分类，20 条影片，详情和封面请求通过；保留原首页标识
-- **搜索接口检查**: {'working': 8, 'unsupported': 3, 'unavailable': 4, 'ignores_keyword': 1}
+- **搜索接口检查**: {'working': 7, 'unsupported': 3, 'unavailable': 4, 'ignores_keyword': 1}
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 天涯 — unsupported
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 索尼[直连] — unsupported
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 建安 — ignores_keyword

@@ -17,5 +17,10 @@ class DrpyRuntimeTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         for name in ('tvbox_config.json', 'jsm_backup.json'):
             config = json.loads((root / name).read_text())
-            self.assertEqual(config['sites'][0]['type'], 1)
+            settings = json.loads((root / 'eggtv_sync.json').read_text())
+            profile = settings['profiles']['tvbox' if name == 'tvbox_config.json' else 'jsm']
+            selected = next(site for site in config['sites'] if site['key'] == profile['homepage_fallback']['source_key'])
+            self.assertEqual(config['sites'][0]['api'], selected['api'])
+            self.assertEqual(config['sites'][0]['type'], selected['type'])
+            self.assertTrue(selected['type'] == 1 or selected['api'].startswith('csp_'))
             self.assertEqual(config['sites'][0]['key'], 'drpy_js_豆瓣' if name == 'tvbox_config.json' else '新闪雷')

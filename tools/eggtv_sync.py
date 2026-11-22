@@ -843,9 +843,11 @@ def _sync_profile(
     homepage_check = None
     if fallback:
         source = next((site for site in publish_payload["sites"] if site["key"] == fallback["source_key"]), None)
-        if source is None or source.get("type") not in (0, 1):
-            raise SyncError("通用首页接口缺失或不是普通影片接口，保留旧配置")
-        homepage_check = check_native_homepage(source, lambda url: read_http_bytes(url, 15, network, retries=0))
+        if source is None or not (source.get("type") == 1 or
+                                  (source.get("type") == 3 and source.get("api", "").startswith("csp_"))):
+            raise SyncError("首页来源缺失或不是已支持的原生接口，保留旧配置")
+        if source.get("type") == 1:
+            homepage_check = check_native_homepage(source, lambda url: read_http_bytes(url, 15, network, retries=0))
         original = next((site for site in publish_payload["sites"] if site["key"] == first_key), None)
         replacement = copy.deepcopy(source)
         replacement["key"] = first_key
