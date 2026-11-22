@@ -434,6 +434,75 @@ def update_spider_field(
 
 # --- Mirrors ---
 
+def publish_pages_dependencies(repo_root: Path, repo_config: Dict[str, Any],
+                               payload: JsonValue, network: Optional[Dict[str, Any]]) -> List[Path]:
+    """Bundle GitHub scripts locally, so clients need only the working subscription host."""
+    raw_base = compute_raw_base(repo_root, repo_config).rstrip("/")
+    urls = sorted(url for url in resource_urls(payload)
+                  if urllib.parse.urlsplit(url).hostname == "raw.githubusercontent.com")
+
+    def download(url):
+        body = read_http_bytes(url, timeout=30, network=network)
+        head = body[:1024].decode("utf-8-sig", errors="replace").lstrip().lower()
+        if not body.strip() or head.startswith(("<!doctype html", "<html")):
+            raise SyncError(f"配套文件内容无效，保留旧配置: {url}")
+        if urllib.parse.urlsplit(url).path.lower().endswith(".json"):
+            try:
+                json.loads(body)
+            except (ValueError, UnicodeError) as exc:
+                raise SyncError(f"配套 JSON 无效: {url}") from exc
+        digest = hashlib.sha256(body).hexdigest()
+        filename = urllib.parse.unquote(urllib.parse.urlsplit(url).path.rsplit("/", 1)[-1])
+        relative = f"deps/{digest}/{filename}"
+        target = ensure_relative_to_repo(repo_root, relative)
+        return url, body, target, raw_base + "/" + urllib.parse.quote(relative, safe="/")
+
+    # Finish every download before changing the staged payload or files.
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        downloads = list(executor.map(download, urls))
+    replacements, changed = {}, []
+    for url, body, target, published_url in downloads:
+        replacements[url] = published_url
+        if not target.exists() or target.read_bytes() != body:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(body)
+            changed.append(target)
+
+    def rewrite(value):
+        if isinstance(value, dict):
+            return {key: rewrite(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [rewrite(item) for item in value]
+        return replacements.get(value, value) if isinstance(value, str) else value
+
+    payload.update(rewrite(payload))
+    validate_pages_dependencies(repo_root, repo_config, payload)
+    return changed
+
+
+def validate_pages_dependencies(repo_root: Path, repo_config: Dict[str, Any], payload: JsonValue) -> None:
+    """Reject missing/corrupt hosted files and accidental proxy dependencies before publishing."""
+    base = compute_raw_base(repo_root, repo_config).rstrip("/") + "/"
+    for value in all_strings(payload):
+        if value.startswith("https://gh-proxy.com/"):
+            raise SyncError("发布配置仍依赖故障代理，保留旧配置")
+        if value.startswith(base) and ";md5;" in value:
+            url, digest = value.split(";md5;", 1)
+            relative = urllib.parse.unquote(urllib.parse.urlsplit(url).path[len(urllib.parse.urlsplit(base).path):])
+            tool = ensure_relative_to_repo(repo_root, relative)
+            if not tool.is_file() or md5_file(tool) != digest:
+                raise SyncError(f"发布播放工具缺失或校验失败: {url}")
+    for url in resource_urls(payload):
+        if not url.startswith(base):
+            continue
+        relative = urllib.parse.unquote(urllib.parse.urlsplit(url).path[len(urllib.parse.urlsplit(base).path):])
+        if not relative.startswith("deps/"):
+            continue
+        target = ensure_relative_to_repo(repo_root, relative)
+        if not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != relative.split("/")[1]:
+            raise SyncError(f"发布依赖文件缺失或校验失败: {url}")
+
+
 def rewrite_mirror_urls(value: JsonValue, repo_config: Dict[str, Any], transport: str) -> JsonValue:
     """Route GitHub dependencies through the same transport as the config."""
     if transport not in {"jsdelivr", "proxy"}:
@@ -514,6 +583,20 @@ def publish_dependency_transport(repo_root: Path, repo_config: Dict[str, Any],
     transport = repo_config.get("publish_dependency_transport")
     if not transport:
         return []
+    if transport == "pages":
+        changed = []
+        for profile in profiles.values():
+            published = ensure_relative_to_repo(repo_root, profile["publish_output"])
+            if not published.exists():
+                continue
+            payload = load_json(published)
+            validate_pages_dependencies(repo_root, repo_config, payload)
+            # Keep existing subscriptions to the former full mirrors working too.
+            for suffix in ("proxy", "cdn"):
+                alias = published.with_name(published.stem + f"_{suffix}" + published.suffix)
+                if save_json(alias, payload):
+                    changed.append(alias)
+        return changed
     mirrors = repo_config.get("mirrors", {})
     if (not mirrors.get("enabled") or transport not in {"jsdelivr", "proxy"}
             or transport not in mirrors.get("variant_transports", [])):
@@ -603,7 +686,10 @@ def reconcile_spider_fields(
             continue
 
         publish_path = spider_config.get("publish_path", spider_config["download_to"]).lstrip("/")
-        expected_spider = f"{raw_base}/{publish_path};md5;{md5_file(spider_file)}"
+        digest = md5_file(spider_file)
+        if repo_config.get("publish_dependency_transport") == "pages":
+            publish_path = f"jar/mirror-{digest}.jar"
+        expected_spider = f"{raw_base}/{publish_path};md5;{digest}"
         if payload.get("spider") == expected_spider:
             continue
 
@@ -786,6 +872,20 @@ def _sync_profile(
     )
     if spider_file is not None:
         changed_files.append(spider_file)
+
+    if repo_config.get("publish_dependency_transport") == "pages":
+        tool = ensure_relative_to_repo(repo_root, profile_config["spider"]["download_to"])
+        digest = md5_file(tool)
+        immutable = repo_root / "jar" / f"mirror-{digest}.jar"
+        if not immutable.exists() or md5_file(immutable) != digest:
+            immutable.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(tool, immutable)
+            changed_files.append(immutable)
+        publish_payload["spider"] = f"{compute_raw_base(repo_root, repo_config)}/jar/{immutable.name};md5;{digest}"
+        complete_candidates["spider"] = publish_payload["spider"]
+        combined = {"published": publish_payload, "candidates": complete_candidates}
+        changed_files.extend(publish_pages_dependencies(repo_root, repo_config, combined, network))
+        publish_payload, complete_candidates = combined["published"], combined["candidates"]
 
     if profile_config.get("candidates_output"):
         complete_candidates["spider"] = publish_payload.get("spider")

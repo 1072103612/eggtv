@@ -124,17 +124,17 @@ https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json
 
 > ⚠️ `raw.githubusercontent.com` 在国内间歇性被墙，优先使用主配置地址（GitHub Pages）或 jsDelivr 备用地址。
 
-主、副配置的原订阅地址继续有效，返回的配置会通过代理线路下载播放工具和 GitHub 配套脚本，无需重新填写订阅地址。此设置仅改善后续资源下载，GitHub Pages 首次配置请求本身的网络等待仍可能存在。
+主、副配置的原订阅地址继续有效。播放工具和 GitHub 配套脚本随同步保存到本仓库，由同一 GitHub Pages 站点提供，不再依赖第三方 GitHub 代理。文件使用内容校验值命名，避免客户端混用缓存；下载或校验失败时保留旧配置。
 
 ### 网络不稳定时的完整备用线路
 
 若配置地址时快时慢或一直加载，可在 TVBox 的配置设置中改用以下完整备用地址：
 
 ```text
-https://gh-proxy.com/https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config_proxy.json
+https://cdn.jsdelivr.net/gh/1072103612/eggtv@main/tvbox_config.json
 ```
 
-这份配置同时切换配置、播放工具及 GitHub 脚本的下载线路，避免只切换 JSON、工具仍从 GitHub Pages 下载。播放工具采用含校验值的独立文件名，防止镜像缓存新旧版本混用。每次同步自动维护，原配置不受影响。jsDelivr 的 JAR 请求在本次检查中返回 403，因此完整备用配置默认只发布代理线路。第三方影片站及其接口不改写；镜像可用性和速度仍取决于电视所在网络，选择更稳定的一条即可。
+备用地址切换配置文件的下载线路；播放工具及脚本仍从蛋壳 GitHub Pages 获取。旧的 `_proxy.json`、`_cdn.json` 文件保持兼容，内容与主配置一致。第三方影片站及其接口不改写；云端接口测速只供参考，实际搜索和播放仍需在电视上验证。
 
 ### 副配置地址
 ```

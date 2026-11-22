@@ -305,6 +305,44 @@ class SyncTests(unittest.TestCase):
         self.assertTrue(result["changed_files"])
         self.assertEqual(list(self.root.iterdir()), [])
 
+    def test_pages_bundles_scripts_and_rejects_corruption(self):
+        script_url = "https://raw.githubusercontent.com/qist/tvbox/master/js/movie.js"
+        data_url = "https://raw.githubusercontent.com/qist/tvbox/master/json/movie.json"
+        original = {"sites": [{"api": script_url, "ext": data_url},
+                              {"api": "https://example.com/vod", "type": 1}]}
+        contents = {script_url: b"var rule = {};", data_url: b'{"url":"https://example.com"}'}
+        bundled = copy.deepcopy(original)
+        with patch.object(sync, "read_http_bytes", side_effect=lambda url, **kwargs: contents[url]):
+            changed = sync.publish_pages_dependencies(self.root, self.repo, bundled, self.network)
+        self.assertEqual(len(changed), 2)
+        self.assertEqual(bundled["sites"][1], original["sites"][1])
+        self.assertTrue(bundled["sites"][0]["api"].startswith(self.repo["raw_base"] + "/deps/"))
+        changed[0].write_bytes(b"corrupted")
+        with self.assertRaises(sync.SyncError):
+            sync.validate_pages_dependencies(self.root, self.repo, bundled)
+
+    def test_pages_failed_dependency_preserves_payload_and_files(self):
+        original = {"sites": [{"api": "https://raw.githubusercontent.com/qist/tvbox/master/a.js"}]}
+        for content in (b"<html>denied</html>", b""):
+            data = copy.deepcopy(original)
+            with patch.object(sync, "read_http_bytes", return_value=content), self.assertRaises(sync.SyncError):
+                sync.publish_pages_dependencies(self.root, self.repo, data, self.network)
+            self.assertEqual(data, original)
+            self.assertEqual(self.snapshots(), {})
+        with self.assertRaises(sync.SyncError):
+            sync.validate_pages_dependencies(self.root, self.repo, {"api": "https://gh-proxy.com/file.js"})
+
+    def test_pages_sync_keeps_immutable_tool_and_legacy_subscriptions(self):
+        self.repo["publish_dependency_transport"] = "pages"
+        self.run_sync()
+        published = sync.load_json(self.root / "config.json")
+        digest = sync.md5_file(self.root / "jar/main.jar")
+        self.assertEqual(published["spider"], self.repo["raw_base"] + f"/jar/mirror-{digest}.jar;md5;{digest}")
+        self.assertEqual(sync.reconcile_spider_fields(self.root, self.repo, {"main": self.profile}), [])
+        sync.publish_dependency_transport(self.root, self.repo, {"main": self.profile})
+        for suffix in ("cdn", "proxy"):
+            self.assertEqual(sync.load_json(self.root / f"config_{suffix}.json"), published)
+
     def test_filter_before_branding_and_count_without_keywords(self):
         original = payload()
         original["lives"] = [{"url": "http://example.com/live"}]
