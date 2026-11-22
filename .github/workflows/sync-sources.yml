@@ -8,6 +8,7 @@ on:
       - tools/eggtv_sync.py
       - tools/eggtv_speedtest.py
       - tools/eggtv_search.py
+      - tools/drpy-compat-prefix.js
       - tools/eggtv_publish.py
       - tools/verify_published.py
       - tools/playback_policy.py
@@ -69,7 +70,10 @@ jobs:
           fi
 
       - name: Validate prepared configuration files
-        run: python3 tools/verify_published.py --local-only
+        run: |
+          python3 tools/verify_published.py --local-only
+          node --version
+          python3 -m unittest tests.test_drpy_runtime -v
 
       - name: Commit changes
         run: |

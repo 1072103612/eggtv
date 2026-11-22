@@ -1,6 +1,7 @@
 """Verify original subscription URLs and their exact dependency bytes after deployment."""
 import argparse
 import hashlib
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -17,11 +18,18 @@ else:
 def publication_targets(root, config):
     base = sync.compute_raw_base(root, config["repo"]).rstrip("/") + "/"
     targets = {}
+    inspected = set()
 
     def add_local(url, path):
         if not path.is_file():
             raise sync.SyncError(f"发布文件缺失: {path}")
         targets[url] = hashlib.sha256(path.read_bytes()).hexdigest()
+        if url not in inspected and path.suffix == ".js":
+            inspected.add(url)
+            for nested in re.findall(r"\b(?:from|import)\s*[\"']([^\"'\r\n]+)[\"']", path.read_text()):
+                if nested.startswith(base):
+                    relative = urllib.parse.unquote(urllib.parse.urlsplit(nested).path[len(urllib.parse.urlsplit(base).path):])
+                    add_local(nested, sync.ensure_relative_to_repo(root, relative))
 
     for profile in config["profiles"].values():
         output = sync.ensure_relative_to_repo(root, profile["publish_output"])

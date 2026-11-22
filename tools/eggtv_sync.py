@@ -457,22 +457,43 @@ def publish_pages_dependencies(repo_root: Path, repo_config: Dict[str, Any],
     urls = sorted(url for url in resource_urls(payload)
                   if urllib.parse.urlsplit(url).hostname == "raw.githubusercontent.com")
 
+    downloads = {}
+    visiting = set()
+    import_pattern = re.compile(r"\b(?:from|import)\s*([\"'])((?:\.\.?/|https://raw\.githubusercontent\.com/)[^\"'\r\n]+)\1")
+
     def download(url):
+        if url in downloads:
+            return downloads[url]
+        if url in visiting:
+            raise SyncError(f"循环模块依赖: {url}")
+        visiting.add(url)
         body = read_http_bytes(url, timeout=30, network=network)
         validate_resource_body(body, url)
+        if urllib.parse.urlsplit(url).path.endswith("/lib/drpy2.min.js") and repo_config.get("drpy_compat"):
+            prefix = (Path(__file__).with_name("drpy-compat-prefix.js")).read_text()
+            if not re.search(r"function\s+pdfh\s*\(", body.decode("utf-8")):
+                body = prefix.encode("utf-8") + body
+        if urllib.parse.urlsplit(url).path.endswith(".js"):
+            def resolve_import(match):
+                dependency = urllib.parse.urljoin(url, match.group(2))
+                hosted = download(dependency)[3]
+                return match.group(0).replace(match.group(2), hosted)
+            body = import_pattern.sub(resolve_import, body.decode("utf-8")).encode("utf-8")
         digest = hashlib.sha256(body).hexdigest()
         filename = urllib.parse.unquote(urllib.parse.urlsplit(url).path.rsplit("/", 1)[-1])
         if filename in {"", ".", ".."} or "/" in filename or "\\" in filename:
             raise SyncError(f"配套文件名称无效: {url}")
         relative = f"deps/{digest}/{filename}"
         target = ensure_relative_to_repo(repo_root, relative)
-        return url, body, target, raw_base + "/" + urllib.parse.quote(relative, safe="/")
+        result = (url, body, target, raw_base + "/" + urllib.parse.quote(relative, safe="/"))
+        downloads[url] = result
+        visiting.remove(url)
+        return result
 
-    # Finish every download before changing the staged payload or files.
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        downloads = list(executor.map(download, urls))
+    for url in urls:
+        download(url)
     replacements, changed = {}, []
-    for url, body, target, published_url in downloads:
+    for url, body, target, published_url in downloads.values():
         replacements[url] = published_url
         if not target.exists() or target.read_bytes() != body:
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -512,6 +533,15 @@ def validate_pages_dependencies(repo_root: Path, repo_config: Dict[str, Any], pa
         target = ensure_relative_to_repo(repo_root, relative)
         if not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != relative.split("/")[1]:
             raise SyncError(f"发布依赖文件缺失或校验失败: {url}")
+        if target.suffix == ".js":
+            text = target.read_text()
+            imports = re.findall(r"\b(?:from|import)\s*[\"']([^\"'\r\n]+)[\"']", text)
+            nested = [value for value in imports if value.startswith(base)]
+            for value in imports:
+                if value.startswith(("./", "../")):
+                    raise SyncError(f"发布模块仍包含未打包的相对依赖: {url}")
+            if nested:
+                validate_pages_dependencies(repo_root, repo_config, {"modules": nested})
 
 
 def rewrite_mirror_urls(value: JsonValue, repo_config: Dict[str, Any], transport: str) -> JsonValue:

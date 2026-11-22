@@ -321,6 +321,29 @@ class SyncTests(unittest.TestCase):
         with self.assertRaises(sync.SyncError):
             sync.validate_pages_dependencies(self.root, self.repo, bundled)
 
+    def test_pages_bundles_transitive_es_module_imports(self):
+        url = "https://raw.githubusercontent.com/qist/tvbox/master/lib/main.js"
+        child = "https://raw.githubusercontent.com/qist/tvbox/master/lib/helper.js"
+        payload = {"sites": [{"api": url}]}
+        contents = {url: b'import {helper} from "./helper.js"; export default helper;',
+                    child: b'export const helper=1;'}
+        with patch.object(sync, "read_http_bytes", side_effect=lambda url, **kw: contents[url]):
+            files = sync.publish_pages_dependencies(self.root, self.repo, payload, self.network)
+        self.assertEqual(len(files), 2)
+        main = next(path for path in files if path.name == "main.js")
+        self.assertNotIn('./helper.js', main.read_text())
+        self.assertIn(self.repo["raw_base"] + '/deps/', main.read_text())
+        next(path for path in files if path.name == "helper.js").unlink()
+        with self.assertRaises(sync.SyncError):
+            sync.validate_pages_dependencies(self.root, self.repo, payload)
+
+    def test_pages_rejects_module_cycles_without_partial_files(self):
+        url = "https://raw.githubusercontent.com/qist/tvbox/master/lib/main.js"
+        payload = {"sites": [{"api": url}]}
+        with patch.object(sync, "read_http_bytes", return_value=b'import "./main.js";'), self.assertRaises(sync.SyncError):
+            sync.publish_pages_dependencies(self.root, self.repo, payload, self.network)
+        self.assertEqual(self.snapshots(), {})
+
     def test_pages_failed_dependency_preserves_payload_and_files(self):
         original = {"sites": [{"api": "https://raw.githubusercontent.com/qist/tvbox/master/a.js"}]}
         for content in (b"<html>denied</html>", b""):

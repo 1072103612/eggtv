@@ -133,6 +133,8 @@ https://raw.githubusercontent.com/1072103612/eggtv/main/tvbox_config.json
 
 主、副配置的原订阅地址继续有效。播放工具和 GitHub 配套脚本随同步保存到本仓库，由同一 GitHub Pages 站点提供，不再依赖第三方 GitHub 代理。文件使用内容校验值命名，避免客户端混用缓存；下载或校验失败时保留旧配置。
 
+豆瓣使用的 drpy 引擎按 [上游 issue #129](https://github.com/qist/tvbox/issues/129) 补充旧版 `pdfh/pdfa/pd` 解析接口。兼容层使用固定版本的 Cheerio；引擎的 ES 模块间接依赖一同打包、校验并发布，后续自动同步继续保留修复。
+
 ### 网络不稳定时的完整备用线路
 
 若配置地址时快时慢或一直加载，可在 TVBox 的配置设置中改用以下完整备用地址：
