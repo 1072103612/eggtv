@@ -1,6 +1,6 @@
 # 🥚 蛋壳影院 - 同步报告
 
-**同步时间**: 2026-11-22 17:35:12 UTC
+**同步时间**: 2026-11-22 17:40:13 UTC
 
 ---
 
@@ -10,11 +10,13 @@
 - **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **保留站点**: 67 个 ✅
 - **移除站点**: 96 个 🗑️
+- **通用首页校验**: 32 个分类，20 条影片，详情和封面请求通过；保留原首页标识
 - **搜索接口检查**: {'working': 7, 'unsupported': 3, 'unavailable': 4, 'ignores_keyword': 1}
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 天涯 — unsupported
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 索尼[直连] — unsupported
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 建安 — ignores_keyword
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 率率[直连] — unsupported
+- **重命名**: 新闪雷 • MP4 → 蛋壳影院备用首页
 
 **移除的站点** (共 96 个):
 - 搜索 • 豆瓣
@@ -47,6 +49,7 @@
 - **首选来源**: https://raw.githubusercontent.com/qist/tvbox/master/jsm.json
 - **保留站点**: 75 个 ✅
 - **移除站点**: 88 个 🗑️
+- **通用首页校验**: 32 个分类，20 条影片，详情和封面请求通过；保留原首页标识
 - **搜索接口检查**: {'working': 8, 'unsupported': 3, 'unavailable': 4, 'ignores_keyword': 1}
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 天涯 — unsupported
 - **暂停参与聚合搜索（保留浏览）**: 影视 • 索尼[直连] — unsupported
