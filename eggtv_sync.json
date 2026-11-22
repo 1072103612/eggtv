@@ -97,13 +97,22 @@
         ],
         "block_keys": [
           "新闪雷"
+        ],
+        "keyword_exempt_keys": [
+          "drpy_js_豆瓣"
         ]
       },
       "rename_first": "欢迎来到蛋壳影院",
       "upstream_fallback_urls": [
         "https://cdn.jsdelivr.net/gh/qist/tvbox@master/jsm.json"
       ],
-      "first_site_from_upstream": true
+      "first_site_from_upstream": false,
+      "first_site_key": "drpy_js_豆瓣",
+      "homepage_fallback": {
+        "source_key": "电影天堂",
+        "keep_original_as": "drpy_js_豆瓣_legacy",
+        "diagnostic_name": "豆瓣（兼容性待确认）"
+      }
     },
     "jsm": {
       "description": "副配置",
@@ -176,7 +185,14 @@
         "drop_fields": [
           "lives"
         ]
-      }
+      },
+      "first_site_key": "新闪雷",
+      "homepage_fallback": {
+        "source_key": "电影天堂",
+        "keep_original_as": "新闪雷_legacy",
+        "diagnostic_name": "新闪雷（兼容性待确认）"
+      },
+      "rename_first": "蛋壳影院备用首页"
     }
   },
   "speedtest": {

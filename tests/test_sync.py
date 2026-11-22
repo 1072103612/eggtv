@@ -420,6 +420,40 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(result["search"]["summary"], {"unsupported": 1})
         self.assertEqual(sync.load_json(self.root / "search_health_main.json")["sources"][0]["status"], "unsupported")
 
+    def test_native_home_recovery_keeps_the_saved_site_key_and_diagnostic_entry(self):
+        source = payload()
+        source['sites'] = [dict(key='douban', name='搜索 • 豆瓣', api='csp_Demo', type=3),
+                           dict(key='movies', name='电影天堂', api=self.base+'/native', type=1)]
+        self.responses['/source/config.json'] = json.dumps(source).encode()
+        self.responses['/native'] = json.dumps({'class':[{'type_id':'1','type_name':'电影'}],
+            'list':[{'vod_id':'1','vod_name':'电影','vod_pic':'https://example.test/poster.jpg'}]}).encode()
+        self.profile.update(first_site_key='douban', rename_first='欢迎来到蛋壳影院',
+            homepage_fallback={'source_key':'movies','keep_original_as':'douban_legacy','diagnostic_name':'豆瓣（兼容性待确认）'})
+        self.profile['filter'].update(block_keywords=['搜索'],keyword_exempt_keys=['douban'])
+        result=self.run_sync()
+        sites=sync.load_json(self.root/'config.json')['sites']
+        self.assertEqual(sites[0]['key'],'douban')
+        self.assertEqual(sites[0]['type'],1)
+        self.assertEqual(sites[0]['api'],self.base+'/native')
+        self.assertEqual(sites[0]['name'],'欢迎来到蛋壳影院')
+        self.assertIn('movies',[site['key'] for site in sites])
+        self.assertEqual(next(site for site in sites if site['key']=='douban_legacy')['searchable'],0)
+        self.assertEqual(result['homepage_check']['items'],1)
+
+    def test_native_home_checker_fetches_missing_posters_like_fongmi(self):
+        site={'key':'movies','type':1,'api':'https://example.test/vod'}
+        calls=[]
+        def fetch(url):
+            calls.append(url)
+            return json.dumps({'list':[{'vod_id':'7','vod_pic':'https://example.test/poster.jpg'}]} if len(calls)>1
+                else {'class':[{'type_id':'1'}],'list':[{'vod_id':'7','vod_name':'电影'}]}).encode()
+        result=sync.check_native_homepage(site,fetch)
+        self.assertEqual(result['details'],1)
+        self.assertIn('ac=detail',calls[1])
+        self.assertIn('ids=7',calls[1])
+        with self.assertRaises(sync.SyncError):
+            sync.check_native_homepage(site,lambda _:b'{"class":[],"list":[]}')
+
     def test_filter_before_branding_and_count_without_keywords(self):
         original = payload()
         original["lives"] = [{"url": "http://example.com/live"}]

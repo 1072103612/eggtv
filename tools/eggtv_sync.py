@@ -744,6 +744,31 @@ def reconcile_spider_fields(
 
 # --- Sync core ---
 
+def check_native_homepage(site, fetch):
+    """Exercise FongMi SiteApi's non-spider home and missing-poster detail requests."""
+    if site.get("type") != 1:
+        raise SyncError("兜底首页必须为普通 JSON 接口")
+    try:
+        home = json.loads(fetch(site["api"]))
+        classes, items = home.get("class", []), home.get("list", [])
+        if not isinstance(classes, list) or not classes or not isinstance(items, list) or not items:
+            raise SyncError("兜底首页未返回分类和影片")
+        posters = items
+        if not items[0].get("vod_pic"):
+            selected = [item for item in items if not site.get("categories") or item.get("type_name") in site["categories"]]
+            if not selected:
+                raise SyncError("兜底首页影片全部被分类限制排除")
+            parsed = urllib.parse.urlsplit(site["api"])
+            query = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
+            query.update(ac="detail", ids=",".join(str(item["vod_id"]) for item in selected))
+            url = urllib.parse.urlunsplit(parsed._replace(query=urllib.parse.urlencode(query)))
+            posters = json.loads(fetch(url)).get("list", [])
+            if not posters or not any(item.get("vod_pic") for item in posters):
+                raise SyncError("兜底首页详情请求未返回影片封面")
+        return {"source_key": site["key"], "categories": len(classes), "items": len(items), "details": len(posters)}
+    except (ValueError, TypeError, KeyError, AttributeError) as exc:
+        raise SyncError("兜底首页响应格式不符合影视客户端接口") from exc
+
 def resolve_upstream_sources(repo_root: Path, profile_config: Dict[str, Any], cli_override: Optional[str]) -> List[str]:
     candidates = []
     if cli_override:
@@ -814,6 +839,23 @@ def _sync_profile(
     # Use upstream directly as publish payload
     publish_payload = resolve_payload_references(copy.deepcopy(fetched_upstream), upstream_source)
     first_key = profile_config.get("first_site_key")
+    fallback = profile_config.get("homepage_fallback")
+    homepage_check = None
+    if fallback:
+        source = next((site for site in publish_payload["sites"] if site["key"] == fallback["source_key"]), None)
+        if source is None or source.get("type") not in (0, 1):
+            raise SyncError("通用首页接口缺失或不是普通影片接口，保留旧配置")
+        homepage_check = check_native_homepage(source, lambda url: read_http_bytes(url, 15, network, retries=0))
+        original = next((site for site in publish_payload["sites"] if site["key"] == first_key), None)
+        replacement = copy.deepcopy(source)
+        replacement["key"] = first_key
+        replacement["name"] = original["name"] if original else "欢迎来到蛋壳影院"
+        publish_payload["sites"] = [site for site in publish_payload["sites"] if site["key"] != first_key]
+        publish_payload["sites"].insert(0, replacement)
+        if original and original.get("type") == 3 and fallback.get("keep_original_as"):
+            original = copy.deepcopy(original)
+            original.update(key=fallback["keep_original_as"], name=fallback["diagnostic_name"], searchable=0, quickSearch=0)
+            publish_payload["sites"].append(original)
     follow_upstream_first = profile_config.get("first_site_from_upstream", False)
     if follow_upstream_first:
         first_key = publish_payload["sites"][0]["key"]
@@ -827,6 +869,7 @@ def _sync_profile(
         "sites_removed": 0,
         "removed_sites": [],
         "renamed": None,
+        "homepage_check": homepage_check,
     }
 
     # 清洗站点：过滤掉不需要的分类
@@ -836,7 +879,8 @@ def _sync_profile(
         publish_payload["sites"], removed_names = filter_sites(
             publish_payload["sites"], block_keywords,
             profile_config.get("filter", {}).get("block_keys", []),
-            keyword_exempt_keys=[first_key] if follow_upstream_first else [])
+            keyword_exempt_keys=(profile_config.get("filter", {}).get("keyword_exempt_keys", [])
+                                 + ([first_key] if follow_upstream_first else [])))
         publish_payload["sites"], duplicate_names = deduplicate_sites(publish_payload["sites"])
         removed_names.extend(duplicate_names)
         removed_count = original_count - len(publish_payload["sites"])
@@ -1356,7 +1400,8 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
                                       "error": r.get("error"),
                                       "configured_source": r.get("configured_source", r["source"]),
                                       "source_attempts": r.get("source_attempts", []),
-                                      "search": r.get("search")})
+                                      "search": r.get("search"),
+                                      "homepage_check": r.get("homepage_check")})
 
     # 生成 Markdown 报告
     md_lines = []
@@ -1387,6 +1432,9 @@ def generate_sync_report(results: List[Dict[str, Any]], repo_root: Path) -> Path
             md_lines.append("- **状态**: 首选来源不完整，已使用整套候补来源")
         md_lines.append(f"- **保留站点**: {kept} 个 ✅")
         md_lines.append(f"- **移除站点**: {removed} 个 🗑️")
+        if r.get("homepage_check"):
+            check = r["homepage_check"]
+            md_lines.append(f"- **通用首页校验**: {check['categories']} 个分类，{check['items']} 条影片，详情和封面请求通过；保留原首页标识")
 
         if r.get("search"):
             checks = r["search"]

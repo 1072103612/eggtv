@@ -6,7 +6,7 @@ const path = require('path');
   const settings = JSON.parse(fs.readFileSync(path.join(root, 'eggtv_sync.json')));
   const base = settings.repo.raw_base.replace(/\/$/, '') + '/';
   const config = JSON.parse(fs.readFileSync(path.join(root, 'tvbox_config.json')));
-  const url = config.sites.find(s => s.key === 'drpy_js_豆瓣').api;
+  const url = config.sites.find(s => s.type === 3 && s.api.endsWith('/drpy2.min.js')).api;
   const createContext = () => vm.createContext({console, URL, TextEncoder, TextDecoder, print: () => {}, setTimeout, clearTimeout, btoa, atob,
     joinUrl: (base, relative) => new URL(relative, base).href});
   let context = createContext();
@@ -43,5 +43,5 @@ const path = require('path');
   for (const name of ['init', 'home', 'homeVod', 'search']) {
     if (typeof engine.namespace.default[name] !== 'function') throw Error('Missing engine API: ' + name);
   }
-  console.log('Original error reproduced; parser compatibility and full hosted module graph verified.');
+  console.log('Legacy module/parser checks passed; this does not certify the FongMi player crawler contract.');
 })().catch(error => { console.error(error); process.exit(1); });

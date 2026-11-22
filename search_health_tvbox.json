@@ -1,6 +1,6 @@
 {
   "summary": {
-    "working": 7,
+    "working": 8,
     "unsupported": 3,
     "unavailable": 4,
     "ignores_keyword": 1
@@ -28,6 +28,44 @@
     }
   ],
   "sources": [
+    {
+      "key": "drpy_js_豆瓣",
+      "name": "搜索 • 豆瓣",
+      "api": "http://caiji.dyttzyapi.com/api.php/provide/vod",
+      "type": 1,
+      "probe": "catalog-list-v1",
+      "samples": [
+        {
+          "status": "ok",
+          "count": 4,
+          "matches": [
+            "流浪地球2",
+            "流浪地球之大夏战狼",
+            "流浪地球2：再次冒险",
+            "流浪地球"
+          ],
+          "sample": [
+            "流浪地球2",
+            "流浪地球之大夏战狼",
+            "流浪地球2：再次冒险",
+            "流浪地球"
+          ],
+          "keyword": "流浪地球"
+        },
+        {
+          "status": "ok",
+          "count": 1,
+          "matches": [
+            "肖申克的救赎"
+          ],
+          "sample": [
+            "肖申克的救赎"
+          ],
+          "keyword": "肖申克"
+        }
+      ],
+      "status": "working"
+    },
     {
       "key": "电影天堂",
       "name": "影视 • 电影天堂",
@@ -337,12 +375,12 @@
       "samples": [
         {
           "status": "error",
-          "message": "failed to fetch https://zy.jinchancaiji.com/api.php/provide/vod?ac=list&wd=%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83&pg=1: direct: curl: (6) Could not resolve host: zy.jinchancaiji.com",
+          "message": "failed to fetch https://zy.jinchancaiji.com/api.php/provide/vod?ac=list&wd=%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83&pg=1: direct: curl: (22) The requested URL returned error: 403",
           "keyword": "流浪地球"
         },
         {
           "status": "error",
-          "message": "failed to fetch https://zy.jinchancaiji.com/api.php/provide/vod?ac=list&wd=%E8%82%96%E7%94%B3%E5%85%8B&pg=1: direct: curl: (6) Could not resolve host: zy.jinchancaiji.com",
+          "message": "failed to fetch https://zy.jinchancaiji.com/api.php/provide/vod?ac=list&wd=%E8%82%96%E7%94%B3%E5%85%8B&pg=1: direct: curl: (22) The requested URL returned error: 403",
           "keyword": "肖申克"
         }
       ],
@@ -377,12 +415,12 @@
       "samples": [
         {
           "status": "error",
-          "message": "failed to fetch https://zy.jinchancaiji.com/api.php/provide/vod/?ac=list&wd=%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83&pg=1: direct: curl: (6) Could not resolve host: zy.jinchancaiji.com",
+          "message": "failed to fetch https://zy.jinchancaiji.com/api.php/provide/vod/?ac=list&wd=%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83&pg=1: direct: curl: (22) The requested URL returned error: 403",
           "keyword": "流浪地球"
         },
         {
           "status": "error",
-          "message": "failed to fetch https://zy.jinchancaiji.com/api.php/provide/vod/?ac=list&wd=%E8%82%96%E7%94%B3%E5%85%8B&pg=1: direct: curl: (6) Could not resolve host: zy.jinchancaiji.com",
+          "message": "failed to fetch https://zy.jinchancaiji.com/api.php/provide/vod/?ac=list&wd=%E8%82%96%E7%94%B3%E5%85%8B&pg=1: direct: curl: (22) The requested URL returned error: 403",
           "keyword": "肖申克"
         }
       ],
@@ -494,5 +532,5 @@
   ],
   "version": 1,
   "profile": "tvbox",
-  "checked_at": "2026-11-22T17:19:52.748784+00:00"
+  "checked_at": "2026-11-22T17:35:04.525866+00:00"
 }
